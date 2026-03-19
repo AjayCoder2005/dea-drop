@@ -43,7 +43,7 @@ export async function addProduct(formData) {
       .upsert(
         {
           user_id: user.id,
-          user_email: user.email,
+          // user_email: user.email,
           url,
           name: productData.productName,
           current_price: newPrice,

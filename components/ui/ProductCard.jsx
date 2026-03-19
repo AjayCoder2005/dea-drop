@@ -244,8 +244,7 @@ const ProductCard = ({ product: initialProduct }) => {
           borderRadius: 14,
           overflow: "hidden",
           flexShrink: 0,
-          background: "#13131a",
-          /* glass transparent border */
+          background: "#f8f8f8",
           border: "1px solid rgba(255,255,255,0.07)",
           boxShadow: "0 0 0 1px rgba(108,99,255,0.08), inset 0 1px 0 rgba(255,255,255,0.05)",
         }}
@@ -258,16 +257,7 @@ const ProductCard = ({ product: initialProduct }) => {
           pointerEvents: "none",
         }} />
 
-        {/* 4 corner accent dots */}
-        {[{top:7,left:7},{top:7,right:7},{bottom:7,left:7},{bottom:7,right:7}].map((pos, i) => (
-          <div key={i} className="pc-corner" style={{
-            position: "absolute", ...pos, zIndex: 7,
-            width: 4, height: 4, borderRadius: "50%",
-            background: "#6c63ff",
-            animationDelay: `${i * 0.6}s`,
-            pointerEvents: "none",
-          }} />
-        ))}
+        {/* 4 corner accent dots — REMOVED */}
 
         {/* Slow scan-line sweep */}
         <div className="pc-scan-line" style={{
@@ -307,8 +297,9 @@ const ProductCard = ({ product: initialProduct }) => {
               className={imgLoaded ? "pc-img-loaded" : ""}
               style={{
                 objectFit: "contain",
-                padding: "14px",
+                padding: "10px",
                 opacity: imgLoaded ? 1 : 0,
+                mixBlendMode: "multiply",
               }}
               onLoad={() => setImgLoaded(true)}
               onError={() => setImgError(true)}

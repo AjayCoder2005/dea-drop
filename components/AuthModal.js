@@ -7,7 +7,7 @@ import { X } from "lucide-react";
 export default function AuthModal({ isOpen, onClose }) {
   const [loading, setLoading] = useState(false);
 
-  // Close on Escape key
+  // Close on Escape
   useEffect(() => {
     if (!isOpen) return;
     const handler = (e) => { if (e.key === "Escape") onClose(); };
@@ -15,13 +15,9 @@ export default function AuthModal({ isOpen, onClose }) {
     return () => document.removeEventListener("keydown", handler);
   }, [isOpen, onClose]);
 
-  // Prevent body scroll when open
+  // Lock body scroll
   useEffect(() => {
-    if (isOpen) {
-      document.body.style.overflow = "hidden";
-    } else {
-      document.body.style.overflow = "";
-    }
+    document.body.style.overflow = isOpen ? "hidden" : "";
     return () => { document.body.style.overflow = ""; };
   }, [isOpen]);
 
@@ -31,15 +27,12 @@ export default function AuthModal({ isOpen, onClose }) {
       const supabase = createClient();
       const { error } = await supabase.auth.signInWithOAuth({
         provider: "google",
-        options: {
-          redirectTo: `${window.location.origin}/auth/callback`,
-        },
+        options: { redirectTo: `${window.location.origin}/auth/callback` },
       });
       if (error) {
         console.error("OAuth error:", error);
         setLoading(false);
       }
-      // No setLoading(false) on success — page will redirect
     } catch (err) {
       console.error("Login error:", err);
       setLoading(false);
@@ -49,33 +42,41 @@ export default function AuthModal({ isOpen, onClose }) {
   if (!isOpen) return null;
 
   return (
-    // Backdrop
-    <div
-      onClick={onClose}
-      style={{
-        position: "fixed", inset: 0, zIndex: 1000,
-        background: "rgba(0,0,0,0.75)",
-        backdropFilter: "blur(6px)",
-        display: "flex", alignItems: "center", justifyContent: "center",
-        padding: "16px",
-        animation: "fadeIn .2s ease",
-      }}
-    >
-      {/* Modal box — stop click propagation so clicking inside doesn't close */}
+    <>
+      {/* ── Full viewport backdrop — fixed, covers everything including navbar ── */}
+      <div
+        onClick={onClose}
+        style={{
+          position: "fixed",
+          top: 0, left: 0, right: 0, bottom: 0,
+          width: "100vw", height: "100vh",
+          zIndex: 9999,
+          background: "rgba(0,0,0,0.8)",
+          backdropFilter: "blur(8px)",
+          WebkitBackdropFilter: "blur(8px)",
+          animation: "bdFadeIn .2s ease",
+        }}
+      />
+
+      {/* ── Modal — centered in viewport using fixed + transform ── */}
       <div
         onClick={(e) => e.stopPropagation()}
         style={{
+          position: "fixed",
+          top: "50%", left: "50%",
+          transform: "translate(-50%, -50%)",
+          zIndex: 10000,
+          width: "calc(100vw - 32px)",
+          maxWidth: 420,
           background: "#111118",
-          border: "1px solid #222230",
+          border: "1px solid #2a2a3a",
           borderRadius: 20,
           padding: "32px",
-          width: "100%", maxWidth: 400,
-          position: "relative",
-          animation: "modalIn .25s cubic-bezier(0.34,1.56,0.64,1)",
-          boxShadow: "0 24px 80px rgba(0,0,0,0.6)",
+          boxShadow: "0 32px 100px rgba(0,0,0,0.7), 0 0 0 1px rgba(108,99,255,0.1)",
+          animation: "modalPop .3s cubic-bezier(0.34,1.56,0.64,1)",
         }}
       >
-        {/* Close button */}
+        {/* Close */}
         <button
           onClick={onClose}
           style={{
@@ -98,7 +99,7 @@ export default function AuthModal({ isOpen, onClose }) {
             width: 36, height: 36,
             background: "linear-gradient(135deg,#6c63ff,#ff6584)",
             borderRadius: 10, display: "flex", alignItems: "center",
-            justifyContent: "center", fontSize: 16,
+            justifyContent: "center", fontSize: 16, flexShrink: 0,
           }}>
             💰
           </div>
@@ -108,31 +109,28 @@ export default function AuthModal({ isOpen, onClose }) {
         </div>
 
         {/* Headline */}
-        <h2 style={{ fontSize: 20, fontWeight: 600, color: "#f0f0f5", marginBottom: 6, lineHeight: 1.2 }}>
+        <h2 style={{ fontSize: 20, fontWeight: 600, color: "#f0f0f5", margin: "0 0 6px", lineHeight: 1.2 }}>
           Sign in to continue
         </h2>
-        <p style={{ fontSize: 13, color: "#888899", marginBottom: 24, lineHeight: 1.5 }}>
+        <p style={{ fontSize: 13, color: "#888899", margin: "0 0 24px", lineHeight: 1.6 }}>
           Track product prices and get instant alerts when they drop
         </p>
 
-        {/* Feature list */}
-        <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 28 }}>
+        {/* Features */}
+        <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 24 }}>
           {[
             { icon: "🔍", text: "Track any product URL" },
             { icon: "📉", text: "Real-time price drop alerts" },
             { icon: "🎯", text: "Set custom target prices" },
             { icon: "📧", text: "Instant email notifications" },
           ].map(({ icon, text }) => (
-            <div key={text} style={{
-              display: "flex", alignItems: "center", gap: 10,
-              fontSize: 13, color: "#888899",
-            }}>
+            <div key={text} style={{ display: "flex", alignItems: "center", gap: 10, fontSize: 13, color: "#888899" }}>
               <span style={{
-                width: 28, height: 28,
+                width: 28, height: 28, flexShrink: 0,
                 background: "rgba(108,99,255,0.1)",
+                border: "1px solid rgba(108,99,255,0.15)",
                 borderRadius: 8,
-                display: "flex", alignItems: "center", justifyContent: "center",
-                fontSize: 13, flexShrink: 0,
+                display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13,
               }}>
                 {icon}
               </span>
@@ -151,27 +149,28 @@ export default function AuthModal({ isOpen, onClose }) {
           style={{
             display: "flex", alignItems: "center", justifyContent: "center", gap: 10,
             width: "100%", padding: "13px 20px",
-            background: loading ? "#f0f0f0" : "#ffffff",
-            border: "1px solid #e0e0e0",
-            borderRadius: 10, fontSize: 14, fontWeight: 500,
+            background: "#ffffff",
+            border: "none", borderRadius: 10,
+            fontSize: 14, fontWeight: 600,
             cursor: loading ? "not-allowed" : "pointer",
             fontFamily: "'Sora', sans-serif",
             color: "#3c4043",
-            transition: "all .2s",
-            opacity: loading ? 0.8 : 1,
+            transition: "opacity .2s, transform .1s",
+            opacity: loading ? 0.75 : 1,
           }}
-          onMouseEnter={e => { if (!loading) e.currentTarget.style.background = "#f8f8f8"; }}
-          onMouseLeave={e => { if (!loading) e.currentTarget.style.background = "#ffffff"; }}
+          onMouseEnter={e => { if (!loading) { e.currentTarget.style.opacity = "0.9"; e.currentTarget.style.transform = "scale(1.01)"; } }}
+          onMouseLeave={e => { e.currentTarget.style.opacity = "1"; e.currentTarget.style.transform = "scale(1)"; }}
+          onMouseDown={e => { e.currentTarget.style.transform = "scale(0.99)"; }}
+          onMouseUp={e => { e.currentTarget.style.transform = "scale(1)"; }}
         >
           {loading ? (
             <>
               <div style={{
-                width: 18, height: 18,
-                border: "2px solid #6c63ff",
-                borderTopColor: "transparent",
+                width: 18, height: 18, flexShrink: 0,
+                border: "2.5px solid rgba(108,99,255,0.3)",
+                borderTopColor: "#6c63ff",
                 borderRadius: "50%",
                 animation: "spin .7s linear infinite",
-                flexShrink: 0,
               }} />
               Redirecting to Google...
             </>
@@ -193,21 +192,20 @@ export default function AuthModal({ isOpen, onClose }) {
         </p>
       </div>
 
-      {/* Animations */}
+      {/* Keyframes */}
       <style>{`
-        @keyframes fadeIn {
+        @keyframes bdFadeIn {
           from { opacity: 0; }
           to   { opacity: 1; }
         }
-        @keyframes modalIn {
-          from { opacity: 0; transform: scale(0.92) translateY(12px); }
-          to   { opacity: 1; transform: scale(1)    translateY(0); }
+        @keyframes modalPop {
+          from { opacity: 0; transform: translate(-50%, -46%) scale(0.94); }
+          to   { opacity: 1; transform: translate(-50%, -50%) scale(1); }
         }
         @keyframes spin {
-          from { transform: rotate(0deg); }
-          to   { transform: rotate(360deg); }
+          to { transform: rotate(360deg); }
         }
       `}</style>
-    </div>
+    </>
   );
 }

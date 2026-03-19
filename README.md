@@ -1,5 +1,4 @@
 # DealDrop - Smart Product Price Tracker
-### Watch here - https://youtu.be/HakXg-hFZ_c
 
 Track product prices across e-commerce sites and get alerts on price drops. Built with Next.js, Firecrawl, and Supabase.
 
@@ -44,7 +43,6 @@ Before you begin, ensure you have:
 ### 1. Clone and Install
 
 ```bash
-git clone https://github.com/piyush-eon/smart-product-price-tracker.git
 cd smart-product-price-tracker
 npm install
 ```

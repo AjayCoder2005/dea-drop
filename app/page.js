@@ -103,8 +103,18 @@ export default async function Home() {
             </span>
           </div>
 
-          {/* ✅ Each product renders ONCE via unique key */}
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))", gap: 16 }}>
+          {/*
+            ✅ KEY FIX: alignItems: "start" stops the CSS grid from stretching
+            sibling cards to match the tallest card in each row.
+            Without this, opening a chart on one card makes every other card
+            in the same row expand to the same height.
+          */}
+          <div style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))",
+            gap: 16,
+            alignItems: "start",   // ← THE FIX
+          }}>
             {products.map((product) => (
               <ProductCard key={product.id} product={product} />
             ))}

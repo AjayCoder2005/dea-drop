@@ -8,8 +8,13 @@ import {
   Trash2, ExternalLink, BarChart2,
   Bell, BellOff, Check, TrendingDown,
   TrendingUp, Minus, Eye,
-  BadgeCheck, Tag, Radio,
 } from "lucide-react";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import {
+  faCrosshairs,        // ── Target Reached badge
+  faCircleExclamation, // ── Alert price badge
+  faSatelliteDish,     // ── Tracking status pill
+} from "@fortawesome/free-solid-svg-icons";
 import { deleteProduct, setTargetPrice } from "@/app/actions";
 import PriceChart from "./PriceChart";
 import { toast } from "sonner";
@@ -287,7 +292,7 @@ const ProductCard = ({ product: initialProduct }) => {
             padding: "5px 11px", borderRadius: 20,
             backdropFilter: "blur(8px)",
           }}>
-            <BadgeCheck style={{ width: 14, height: 14 }} />
+            <FontAwesomeIcon icon={faCrosshairs} style={{ width: 13, height: 13 }} />
             Target Reached!
           </div>
         )}
@@ -384,7 +389,7 @@ const ProductCard = ({ product: initialProduct }) => {
             </span>
           ) : (
             <span style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 13, color: "#444455", letterSpacing: "0.3px" }}>
-              <Radio style={{ width: 12, height: 12, color: "#444455" }} />
+              <FontAwesomeIcon icon={faSatelliteDish} style={{ width: 12, height: 12, color: "#444455" }} />
               Tracking
             </span>
           )}
@@ -399,7 +404,7 @@ const ProductCard = ({ product: initialProduct }) => {
             background: isTargetMet ? "rgba(34,197,94,0.06)" : "rgba(167,139,250,0.06)",
           }}>
             <span style={{ display: "flex", alignItems: "center", gap: 6, color: isTargetMet ? "#22c55e" : "#a78bfa" }}>
-              <Tag style={{ width: 14, height: 14 }} />
+              <FontAwesomeIcon icon={faCircleExclamation} style={{ width: 13, height: 13 }} />
               Alert: {currency}{parseFloat(product.target_price).toLocaleString("en-IN")}
               {isTargetMet && <span style={{ fontSize: 12, background: "rgba(34,197,94,0.15)", padding: "1px 6px", borderRadius: 10, color: "#22c55e" }}>✓ Met</span>}
             </span>

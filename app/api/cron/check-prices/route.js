@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { scrapeProduct } from "@/lib/firecrawl";
-import { sendPriceDropAlert } from "@/lib/resend"; // ✅ FIXED
+import { sendPriceDropAlert } from "@/lib/resend";
 
 export async function POST(request) {
   try {
@@ -11,10 +11,6 @@ export async function POST(request) {
     if (!cronSecret || authHeader !== `Bearer ${cronSecret}`) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
-
-    // ✅ Log env vars to debug
-    console.log("SUPABASE_URL:", process.env.NEXT_PUBLIC_SUPABASE_URL ? "✅" : "❌ MISSING");
-    console.log("SERVICE_ROLE:", process.env.SUPABASE_SERVICE_ROLE_KEY ? "✅" : "❌ MISSING");
 
     const supabase = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL,
@@ -52,6 +48,7 @@ export async function POST(request) {
         const newPrice = parseFloat(productData.currentPrice);
         const oldPrice = parseFloat(product.current_price);
 
+        // Update product
         await supabase
           .from("products")
           .update({
@@ -75,26 +72,25 @@ export async function POST(request) {
           results.priceChanges++;
         }
 
-        // ✅ Send alert only when target price is reached
+        // ✅ Use user_email directly - no auth.admin needed
         const targetPrice = parseFloat(product.target_price);
         if (
           product.target_price &&
           newPrice <= targetPrice &&
           oldPrice > targetPrice
         ) {
-          const { data: { user } } = await supabase.auth.admin.getUserById(
-            product.user_id
-          );
+          const userEmail = product.user_email; // ✅ FIXED
 
-          if (user?.email) {
+          if (userEmail) {
             const emailResult = await sendPriceDropAlert(
-              user.email,
+              userEmail,
               product,
               oldPrice,
               newPrice
             );
             if (emailResult.success) {
               results.alertsSent++;
+              console.log(`✅ Alert sent to ${userEmail} for ${product.name}`);
             }
           }
         }

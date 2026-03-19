@@ -1,0 +1,31 @@
+/* ── Price animation keyframes ─────────────────────────── */
+@keyframes priceDrop {
+    0%   { transform: scale(1);    background: transparent; }
+    20%  { transform: scale(1.18); background: rgba(16,185,129,0.15); border-radius: 6px; }
+    60%  { transform: scale(1.1);  background: rgba(16,185,129,0.10); }
+    100% { transform: scale(1);    background: transparent; }
+  }
+  @keyframes priceRise {
+    0%   { transform: scale(1);    background: transparent; }
+    20%  { transform: scale(1.1);  background: rgba(239,68,68,0.12); border-radius: 6px; }
+    100% { transform: scale(1);    background: transparent; }
+  }
+  @keyframes badgeIn {
+    from { opacity: 0; transform: translateY(-6px) scale(0.85); }
+    to   { opacity: 1; transform: translateY(0)    scale(1); }
+  }
+  @keyframes pulseGlow {
+    0%,100% { box-shadow: 0 0 0 0   rgba(16,185,129,0.4); }
+    50%     { box-shadow: 0 0 0 8px rgba(16,185,129,0); }
+  }
+  @keyframes liveBlip {
+    0%,100% { opacity: 1; }
+    50%     { opacity: 0.15; }
+  }
+  
+  /* ── Utility classes used in ProductCard ───────────────── */
+  .animate-price-drop { animation: priceDrop  0.7s ease-out forwards; }
+  .animate-price-rise { animation: priceRise  0.7s ease-out forwards; }
+  .badge-in           { animation: badgeIn    0.35s cubic-bezier(0.34,1.56,0.64,1) forwards; }
+  .pulse-glow         { animation: pulseGlow  1.5s ease-in-out 3; }
+  .live-blip          { animation: liveBlip   1.4s ease-in-out infinite; }

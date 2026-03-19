@@ -49,45 +49,49 @@ export default function AuthModal({ isOpen, onClose }) {
 
   const modalContent = (
     <>
-      {/* Keyframes injected once */}
+      {/* Keyframes */}
       <style>{`
         @keyframes bdFadeIn {
           from { opacity: 0; }
           to   { opacity: 1; }
         }
         @keyframes modalPop {
-          from { opacity: 0; transform: translate(-50%, -46%) scale(0.94); }
-          to   { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+          from { opacity: 0; transform: scale(0.94) translateY(12px); }
+          to   { opacity: 1; transform: scale(1)    translateY(0); }
         }
         @keyframes spin {
           to { transform: rotate(360deg); }
         }
       `}</style>
 
-      {/* ── Backdrop — portaled to body, no ancestor interference ── */}
+      {/*
+        ── Single wrapper acts as both backdrop AND flex centering container.
+           No separate backdrop div + no transform trick = perfectly centered
+           on every screen size including mobile.
+      ── */}
       <div
         onClick={onClose}
         style={{
           position: "fixed",
-          top: 0, left: 0,
-          width: "100vw", height: "100vh",
+          inset: 0,                          // covers full viewport
           zIndex: 99998,
+          display: "flex",
+          alignItems: "center",             // vertical center
+          justifyContent: "center",         // horizontal center
+          padding: "16px",                  // safe zone on small screens
           background: "rgba(0,0,0,0.85)",
           backdropFilter: "blur(10px)",
           WebkitBackdropFilter: "blur(10px)",
+          overflowY: "auto",                // scroll if modal taller than viewport
           animation: "bdFadeIn .2s ease",
         }}
-      />
-
-      {/* ── Modal ── */}
+      >
+      {/* ── Modal — stops click from closing when clicking inside ── */}
       <div
         onClick={(e) => e.stopPropagation()}
         style={{
-          position: "fixed",
-          top: "50%", left: "50%",
-          transform: "translate(-50%, -50%)",
-          zIndex: 99999,
-          width: "calc(100vw - 32px)",
+          position: "relative",
+          width: "100%",
           maxWidth: 420,
           background: "#111118",
           border: "1px solid #2a2a3a",
@@ -95,6 +99,7 @@ export default function AuthModal({ isOpen, onClose }) {
           padding: "32px",
           boxShadow: "0 32px 100px rgba(0,0,0,0.7), 0 0 0 1px rgba(108,99,255,0.1)",
           animation: "modalPop .3s cubic-bezier(0.34,1.56,0.64,1)",
+          margin: "auto",                   // extra safety for flex centering
         }}
       >
         {/* Close button */}
@@ -213,7 +218,8 @@ export default function AuthModal({ isOpen, onClose }) {
         <p style={{ fontSize: 11, color: "#555566", textAlign: "center", marginTop: 14 }}>
           Free to use · No credit card required
         </p>
-      </div>
+      </div>  {/* end modal */}
+      </div>  {/* end backdrop/centering wrapper */}
     </>
   );
 

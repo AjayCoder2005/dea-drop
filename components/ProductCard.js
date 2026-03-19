@@ -5,16 +5,12 @@ import { createClient } from "@/utils/supabase/client";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import {
-  Trash2, ExternalLink, BarChart2,
-  Bell, BellOff, Check, TrendingDown,
-  TrendingUp, Minus, Eye,
+  Trash2, BarChart2, Bell, BellOff, Check,
+  TrendingDown, TrendingUp, Eye,
+  CircleDot,   // Tracking status pill
+  Crosshair,   // Target Reached badge
+  BellRing,    // Alert price badge
 } from "lucide-react";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import {
-  faCrosshairs,        // ── Target Reached badge
-  faCircleExclamation, // ── Alert price badge
-  faSatelliteDish,     // ── Tracking status pill
-} from "@fortawesome/free-solid-svg-icons";
 import { deleteProduct, setTargetPrice } from "@/app/actions";
 import PriceChart from "./PriceChart";
 import { toast } from "sonner";
@@ -127,7 +123,6 @@ const ProductCard = ({ product: initialProduct }) => {
   const animatedPrice = useCountUp(product.current_price ?? 0, 700);
   const isTargetMet   = product.target_price && product.current_price <= product.target_price;
 
-  // ── FIX: stopPropagation so only THIS card's chart toggles ───────────────
   const handleToggleChart = (e) => {
     e.stopPropagation();
     if (!showChart) { setChartKey(k => k + 1); setShowChart(true); }
@@ -212,19 +207,16 @@ const ProductCard = ({ product: initialProduct }) => {
         opacity: deleting ? 0.4 : 1,
       }}
     >
-      {/* ── IMAGE ────────────────────────────────────────────────────────── */}
+      {/* ── IMAGE ──────────────────────────────────────────────────────────── */}
       <div style={{
         position: "relative", width: "100%",
-        aspectRatio: "16/9",
-        background: "#13131a",
+        aspectRatio: "16/9", background: "#13131a",
         overflow: "hidden", flexShrink: 0,
       }}>
-        {/* Shimmer while loading */}
         {!imgLoaded && !imgError && (
           <div className="pc-img-shimmer" style={{ position: "absolute", inset: 0, zIndex: 1 }} />
         )}
 
-        {/* Emoji fallback */}
         {(!product.image_url || imgError) && (
           <div style={{
             position: "absolute", inset: 0,
@@ -238,7 +230,6 @@ const ProductCard = ({ product: initialProduct }) => {
           </div>
         )}
 
-        {/* Actual image */}
         {product.image_url && !imgError && (
           <Image
             src={product.image_url}
@@ -246,8 +237,7 @@ const ProductCard = ({ product: initialProduct }) => {
             fill
             sizes="(max-width: 768px) 100vw, 400px"
             style={{
-              objectFit: "contain",
-              padding: "14px",
+              objectFit: "contain", padding: "14px",
               opacity: imgLoaded ? 1 : 0,
               transition: "opacity 0.4s ease",
               mixBlendMode: "luminosity",
@@ -259,29 +249,25 @@ const ProductCard = ({ product: initialProduct }) => {
           />
         )}
 
-        {/* Dark gradient overlay at bottom */}
         <div style={{
-          position: "absolute", bottom: 0, left: 0, right: 0,
-          height: "50%",
-          background: "linear-gradient(to bottom, transparent, #0e0e14)",
-          zIndex: 2,
+          position: "absolute", bottom: 0, left: 0, right: 0, height: "50%",
+          background: "linear-gradient(to bottom, transparent, #0e0e14)", zIndex: 2,
         }} />
 
-        {/* ── LIVE badge ── */}
+        {/* LIVE badge */}
         <div style={{
           position: "absolute", top: 10, right: 10, zIndex: 5,
           display: "flex", alignItems: "center", gap: 5,
           background: "rgba(0,0,0,0.7)", backdropFilter: "blur(8px)",
           border: "1px solid rgba(34,197,94,0.2)",
           color: "#22c55e", fontSize: 9, fontWeight: 700,
-          padding: "4px 8px", borderRadius: 20,
-          letterSpacing: "0.5px",
+          padding: "4px 8px", borderRadius: 20, letterSpacing: "0.5px",
         }}>
           <span className="pc-live-blip" style={{ width: 5, height: 5, borderRadius: "50%", background: "#22c55e", display: "inline-block", flexShrink: 0 }} />
           LIVE
         </div>
 
-        {/* ── Target reached badge ── */}
+        {/* Target reached badge — Crosshair icon */}
         {isTargetMet && (
           <div className="pc-badge-in" style={{
             position: "absolute", top: 10, left: 10, zIndex: 5,
@@ -292,12 +278,12 @@ const ProductCard = ({ product: initialProduct }) => {
             padding: "5px 11px", borderRadius: 20,
             backdropFilter: "blur(8px)",
           }}>
-            <FontAwesomeIcon icon={faCrosshairs} style={{ width: 13, height: 13 }} />
+            <Crosshair style={{ width: 13, height: 13 }} />
             Target Reached!
           </div>
         )}
 
-        {/* ── Price drop flash badge ── */}
+        {/* Price drop flash badge */}
         {priceFlash === "drop" && dropPct && (
           <div className="pc-badge-in" style={{
             position: "absolute", bottom: 14, left: 12, zIndex: 5,
@@ -311,7 +297,7 @@ const ProductCard = ({ product: initialProduct }) => {
           </div>
         )}
 
-        {/* ── Price rise flash badge ── */}
+        {/* Price rise flash badge */}
         {priceFlash === "rise" && (
           <div className="pc-badge-in" style={{
             position: "absolute", bottom: 14, left: 12, zIndex: 5,
@@ -325,14 +311,13 @@ const ProductCard = ({ product: initialProduct }) => {
           </div>
         )}
 
-        {/* ── Delete button ── */}
+        {/* Delete button */}
         <button
           type="button"
           onClick={(e) => { e.stopPropagation(); setShowConfirm(true); }}
           disabled={deleting}
           style={{
-            position: "absolute",
-            top: 10,
+            position: "absolute", top: 10,
             left: isTargetMet ? "auto" : 10,
             right: isTargetMet ? 10 : "auto",
             zIndex: 5,
@@ -350,7 +335,7 @@ const ProductCard = ({ product: initialProduct }) => {
         </button>
       </div>
 
-      {/* ── BODY ─────────────────────────────────────────────────────────── */}
+      {/* ── BODY ───────────────────────────────────────────────────────────── */}
       <div style={{ padding: "14px 16px", display: "flex", flexDirection: "column", gap: 10, flex: 1 }}>
 
         {/* Source */}
@@ -369,7 +354,7 @@ const ProductCard = ({ product: initialProduct }) => {
           </p>
         </a>
 
-        {/* ── Price row ── */}
+        {/* Price row */}
         <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
           <span
             className={priceFlash === "drop" ? "pc-price-drop" : priceFlash === "rise" ? "pc-price-rise" : ""}
@@ -378,24 +363,23 @@ const ProductCard = ({ product: initialProduct }) => {
             {currency}{animatedPrice.toLocaleString("en-IN")}
           </span>
 
-          {/* Status pill */}
           {priceFlash === "drop" ? (
-            <span className="pc-slide-up" style={{ display: "flex", alignItems: "center", gap: 3, fontSize: 11, fontWeight: 600, color: "#22c55e", background: "rgba(34,197,94,0.1)", border: "1px solid rgba(34,197,94,0.2)", padding: "2px 8px", borderRadius: 20 }}>
-              <TrendingDown style={{ width: 10, height: 10 }} /> Dropped!
+            <span className="pc-slide-up" style={{ display: "flex", alignItems: "center", gap: 3, fontSize: 12, fontWeight: 600, color: "#22c55e", background: "rgba(34,197,94,0.1)", border: "1px solid rgba(34,197,94,0.2)", padding: "3px 9px", borderRadius: 20 }}>
+              <TrendingDown style={{ width: 11, height: 11 }} /> Dropped!
             </span>
           ) : priceFlash === "rise" ? (
-            <span className="pc-slide-up" style={{ display: "flex", alignItems: "center", gap: 3, fontSize: 11, fontWeight: 600, color: "#f43f5e", background: "rgba(244,63,94,0.1)", border: "1px solid rgba(244,63,94,0.2)", padding: "2px 8px", borderRadius: 20 }}>
-              <TrendingUp style={{ width: 10, height: 10 }} /> Rose
+            <span className="pc-slide-up" style={{ display: "flex", alignItems: "center", gap: 3, fontSize: 12, fontWeight: 600, color: "#f43f5e", background: "rgba(244,63,94,0.1)", border: "1px solid rgba(244,63,94,0.2)", padding: "3px 9px", borderRadius: 20 }}>
+              <TrendingUp style={{ width: 11, height: 11 }} /> Rose
             </span>
           ) : (
-            <span style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 13, color: "#444455", letterSpacing: "0.3px" }}>
-              <FontAwesomeIcon icon={faSatelliteDish} style={{ width: 12, height: 12, color: "#444455" }} />
+            <span style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 13, color: "#444455", letterSpacing: "0.3px" }}>
+              <CircleDot style={{ width: 13, height: 13 }} />
               Tracking
             </span>
           )}
         </div>
 
-        {/* ── Target badge ── */}
+        {/* Alert badge — BellRing icon */}
         {product.target_price && (
           <div style={{
             display: "flex", justifyContent: "space-between", alignItems: "center",
@@ -403,22 +387,26 @@ const ProductCard = ({ product: initialProduct }) => {
             border: `1px solid ${isTargetMet ? "rgba(34,197,94,0.25)" : "rgba(167,139,250,0.2)"}`,
             background: isTargetMet ? "rgba(34,197,94,0.06)" : "rgba(167,139,250,0.06)",
           }}>
-            <span style={{ display: "flex", alignItems: "center", gap: 6, color: isTargetMet ? "#22c55e" : "#a78bfa" }}>
-              <FontAwesomeIcon icon={faCircleExclamation} style={{ width: 13, height: 13 }} />
+            <span style={{ display: "flex", alignItems: "center", gap: 7, color: isTargetMet ? "#22c55e" : "#a78bfa" }}>
+              <BellRing style={{ width: 14, height: 14 }} />
               Alert: {currency}{parseFloat(product.target_price).toLocaleString("en-IN")}
-              {isTargetMet && <span style={{ fontSize: 12, background: "rgba(34,197,94,0.15)", padding: "1px 6px", borderRadius: 10, color: "#22c55e" }}>✓ Met</span>}
+              {isTargetMet && (
+                <span style={{ fontSize: 11, background: "rgba(34,197,94,0.15)", padding: "2px 7px", borderRadius: 10, color: "#22c55e", fontWeight: 600 }}>
+                  ✓ Met
+                </span>
+              )}
             </span>
             <button
               type="button"
               onClick={handleRemoveTarget}
-              style={{ background: "none", border: "none", color: "#333340", cursor: "pointer", fontSize: 13, lineHeight: 1, padding: "0 2px", transition: "color .2s" }}
+              style={{ background: "none", border: "none", color: "#333340", cursor: "pointer", fontSize: 15, lineHeight: 1, padding: "0 2px", transition: "color .2s" }}
               onMouseEnter={e => e.currentTarget.style.color = "#f43f5e"}
               onMouseLeave={e => e.currentTarget.style.color = "#333340"}
             >✕</button>
           </div>
         )}
 
-        {/* ── Target input ── */}
+        {/* Target input */}
         {showTargetInput && (
           <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
             <input
@@ -442,24 +430,20 @@ const ProductCard = ({ product: initialProduct }) => {
           </div>
         )}
 
-        {/* ── Confirm delete ── */}
+        {/* Confirm delete */}
         {showConfirm && (
           <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 12px", borderRadius: 10, background: "rgba(244,63,94,0.07)", border: "1px solid rgba(244,63,94,0.2)" }}>
             <span style={{ fontSize: 12, color: "#f43f5e", flex: 1 }}>Remove this product?</span>
-            <button
-              type="button"
-              onClick={handleDelete}
+            <button type="button" onClick={handleDelete}
               style={{ background: "#f43f5e", color: "#fff", border: "none", borderRadius: 6, padding: "4px 14px", fontSize: 12, cursor: "pointer", fontWeight: 600 }}
             >Yes</button>
-            <button
-              type="button"
-              onClick={(e) => { e.stopPropagation(); setShowConfirm(false); }}
+            <button type="button" onClick={(e) => { e.stopPropagation(); setShowConfirm(false); }}
               style={{ background: "#18181f", color: "#888899", border: "1px solid #222230", borderRadius: 6, padding: "4px 12px", fontSize: 12, cursor: "pointer" }}
             >No</button>
           </div>
         )}
 
-        {/* ── Action buttons ── */}
+        {/* Action buttons */}
         {!showConfirm && (
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginTop: "auto" }}>
             <a
@@ -484,7 +468,7 @@ const ProductCard = ({ product: initialProduct }) => {
           </div>
         )}
 
-        {/* ── Chart toggle ── FIX: type="button" + stopPropagation ── */}
+        {/* Chart toggle */}
         <button
           type="button"
           onClick={handleToggleChart}
@@ -497,7 +481,7 @@ const ProductCard = ({ product: initialProduct }) => {
         </button>
       </div>
 
-      {/* ── Chart ── */}
+      {/* Chart */}
       {showChart && (
         <div className="pc-chart-open" style={{ padding: "0 16px 16px", borderTop: "1px solid #1a1a24" }}>
           <PriceChart key={chartKey} productId={product.id} currency={product.currency} />

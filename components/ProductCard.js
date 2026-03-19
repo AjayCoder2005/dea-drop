@@ -7,7 +7,8 @@ import Image from "next/image";
 import {
   Trash2, ExternalLink, BarChart2,
   Bell, BellOff, Check, TrendingDown,
-  TrendingUp, Minus, Target, Eye,
+  TrendingUp, Minus, Eye,
+  BadgeCheck, Tag, Radio,
 } from "lucide-react";
 import { deleteProduct, setTargetPrice } from "@/app/actions";
 import PriceChart from "./PriceChart";
@@ -282,12 +283,12 @@ const ProductCard = ({ product: initialProduct }) => {
             display: "flex", alignItems: "center", gap: 5,
             background: "rgba(34,197,94,0.15)",
             border: "1px solid rgba(34,197,94,0.4)",
-            color: "#22c55e", fontSize: 10, fontWeight: 700,
-            padding: "4px 10px", borderRadius: 20,
+            color: "#22c55e", fontSize: 12, fontWeight: 700,
+            padding: "5px 11px", borderRadius: 20,
             backdropFilter: "blur(8px)",
           }}>
-            <Target style={{ width: 10, height: 10 }} />
-            Target reached!
+            <BadgeCheck style={{ width: 14, height: 14 }} />
+            Target Reached!
           </div>
         )}
 
@@ -348,14 +349,14 @@ const ProductCard = ({ product: initialProduct }) => {
       <div style={{ padding: "14px 16px", display: "flex", flexDirection: "column", gap: 10, flex: 1 }}>
 
         {/* Source */}
-        <div style={{ fontSize: 10, color: "#333340", textTransform: "uppercase", letterSpacing: "0.8px" }}>
+        <div style={{ fontSize: 11, color: "#333340", textTransform: "uppercase", letterSpacing: "0.8px" }}>
           {(() => { try { return new URL(product.url).hostname.replace("www.", ""); } catch { return ""; } })()}
         </div>
 
         {/* Name */}
         <a href={product.url} target="_blank" rel="noreferrer" style={{ color: "#d0d0e0", textDecoration: "none" }}>
           <p style={{
-            fontSize: 13, fontWeight: 500, lineHeight: 1.45, margin: 0,
+            fontSize: 14, fontWeight: 500, lineHeight: 1.45, margin: 0,
             display: "-webkit-box", WebkitLineClamp: 2,
             WebkitBoxOrient: "vertical", overflow: "hidden",
           }}>
@@ -382,8 +383,8 @@ const ProductCard = ({ product: initialProduct }) => {
               <TrendingUp style={{ width: 10, height: 10 }} /> Rose
             </span>
           ) : (
-            <span style={{ display: "flex", alignItems: "center", gap: 3, fontSize: 10, color: "#333340", letterSpacing: "0.3px" }}>
-              <span style={{ width: 5, height: 5, borderRadius: "50%", background: "#333340", display: "inline-block" }} />
+            <span style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 13, color: "#444455", letterSpacing: "0.3px" }}>
+              <Radio style={{ width: 12, height: 12, color: "#444455" }} />
               Tracking
             </span>
           )}
@@ -393,14 +394,14 @@ const ProductCard = ({ product: initialProduct }) => {
         {product.target_price && (
           <div style={{
             display: "flex", justifyContent: "space-between", alignItems: "center",
-            fontSize: 12, padding: "8px 12px", borderRadius: 10,
+            fontSize: 14, padding: "9px 12px", borderRadius: 10,
             border: `1px solid ${isTargetMet ? "rgba(34,197,94,0.25)" : "rgba(167,139,250,0.2)"}`,
             background: isTargetMet ? "rgba(34,197,94,0.06)" : "rgba(167,139,250,0.06)",
           }}>
             <span style={{ display: "flex", alignItems: "center", gap: 6, color: isTargetMet ? "#22c55e" : "#a78bfa" }}>
-              <Target style={{ width: 11, height: 11 }} />
+              <Tag style={{ width: 14, height: 14 }} />
               Alert: {currency}{parseFloat(product.target_price).toLocaleString("en-IN")}
-              {isTargetMet && <span style={{ fontSize: 10, background: "rgba(34,197,94,0.15)", padding: "1px 6px", borderRadius: 10, color: "#22c55e" }}>✓ Met</span>}
+              {isTargetMet && <span style={{ fontSize: 12, background: "rgba(34,197,94,0.15)", padding: "1px 6px", borderRadius: 10, color: "#22c55e" }}>✓ Met</span>}
             </span>
             <button
               type="button"

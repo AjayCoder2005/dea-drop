@@ -1,11 +1,16 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { createClient } from "@/utils/supabase/client";
 import { X } from "lucide-react";
 
 export default function AuthModal({ isOpen, onClose }) {
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading]   = useState(false);
+  const [mounted, setMounted]   = useState(false);
+
+  // Wait for client mount before using createPortal
+  useEffect(() => { setMounted(true); }, []);
 
   // Close on Escape
   useEffect(() => {
@@ -39,33 +44,49 @@ export default function AuthModal({ isOpen, onClose }) {
     }
   };
 
-  if (!isOpen) return null;
+  // Don't render on server or when closed
+  if (!mounted || !isOpen) return null;
 
-  return (
+  const modalContent = (
     <>
-      {/* ── Full viewport backdrop — fixed, covers everything including navbar ── */}
+      {/* Keyframes injected once */}
+      <style>{`
+        @keyframes bdFadeIn {
+          from { opacity: 0; }
+          to   { opacity: 1; }
+        }
+        @keyframes modalPop {
+          from { opacity: 0; transform: translate(-50%, -46%) scale(0.94); }
+          to   { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+        }
+        @keyframes spin {
+          to { transform: rotate(360deg); }
+        }
+      `}</style>
+
+      {/* ── Backdrop — portaled to body, no ancestor interference ── */}
       <div
         onClick={onClose}
         style={{
           position: "fixed",
-          top: 0, left: 0, right: 0, bottom: 0,
+          top: 0, left: 0,
           width: "100vw", height: "100vh",
-          zIndex: 9999,
-          background: "rgba(0,0,0,0.8)",
-          backdropFilter: "blur(8px)",
-          WebkitBackdropFilter: "blur(8px)",
+          zIndex: 99998,
+          background: "rgba(0,0,0,0.85)",
+          backdropFilter: "blur(10px)",
+          WebkitBackdropFilter: "blur(10px)",
           animation: "bdFadeIn .2s ease",
         }}
       />
 
-      {/* ── Modal — centered in viewport using fixed + transform ── */}
+      {/* ── Modal ── */}
       <div
         onClick={(e) => e.stopPropagation()}
         style={{
           position: "fixed",
           top: "50%", left: "50%",
           transform: "translate(-50%, -50%)",
-          zIndex: 10000,
+          zIndex: 99999,
           width: "calc(100vw - 32px)",
           maxWidth: 420,
           background: "#111118",
@@ -76,8 +97,9 @@ export default function AuthModal({ isOpen, onClose }) {
           animation: "modalPop .3s cubic-bezier(0.34,1.56,0.64,1)",
         }}
       >
-        {/* Close */}
+        {/* Close button */}
         <button
+          type="button"
           onClick={onClose}
           style={{
             position: "absolute", top: 16, right: 16,
@@ -144,6 +166,7 @@ export default function AuthModal({ isOpen, onClose }) {
 
         {/* Google button */}
         <button
+          type="button"
           onClick={handleGoogleLogin}
           disabled={loading}
           style={{
@@ -191,21 +214,10 @@ export default function AuthModal({ isOpen, onClose }) {
           Free to use · No credit card required
         </p>
       </div>
-
-      {/* Keyframes */}
-      <style>{`
-        @keyframes bdFadeIn {
-          from { opacity: 0; }
-          to   { opacity: 1; }
-        }
-        @keyframes modalPop {
-          from { opacity: 0; transform: translate(-50%, -46%) scale(0.94); }
-          to   { opacity: 1; transform: translate(-50%, -50%) scale(1); }
-        }
-        @keyframes spin {
-          to { transform: rotate(360deg); }
-        }
-      `}</style>
     </>
   );
+
+  // ✅ Portal renders directly into document.body —
+  // completely escapes navbar's backdropFilter stacking context
+  return createPortal(modalContent, document.body);
 }

@@ -223,10 +223,10 @@ const ProductCard = ({ product: initialProduct }) => {
             display: "flex", alignItems: "center", gap: 5,
             // ✅ green tint background matching the card border & alert row
             background: "rgba(34,197,94,0.15)",
-            border: "1px solid rgba(34,197,94,0.35)",
+            border: "1px solid rgba(27, 181, 237, 0.35)",
             backdropFilter: "blur(8px)",
             color: "#22c55e",
-            fontSize: 11, fontWeight: 700,
+            fontSize: 15, fontWeight: 750,
             padding: "5px 11px", borderRadius: 20,
           }}>
             {/* checkmark circle icon instead of emoji */}

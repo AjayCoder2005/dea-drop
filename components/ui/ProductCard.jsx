@@ -226,8 +226,8 @@ const ProductCard = ({ product: initialProduct }) => {
             border: "1px solid rgba(27, 181, 237, 0.35)",
             backdropFilter: "blur(8px)",
             color: "#22c55e",
-            fontSize: 15, fontWeight: 750,
-            padding: "5px 11px", borderRadius: 20,
+            fontSize: 12, fontWeight: 725,
+            padding: "5px 11px", borderRadius: 21,
           }}>
             {/* checkmark circle icon instead of emoji */}
             <span style={{ width: 14, height: 14, borderRadius: "50%", background: "#22c55e", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>

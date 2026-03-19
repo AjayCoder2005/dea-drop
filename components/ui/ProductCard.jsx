@@ -8,25 +8,23 @@ import {
   Trash2, ExternalLink, BarChart2,
   Bell, BellOff, Check, TrendingDown,
 } from "lucide-react";
-import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { deleteProduct, setTargetPrice } from "@/app/actions";
 import PriceChart from "./PriceChart";
 import { toast } from "sonner";
-import { createClient } from "@/lib/supabase/client";
 
-// ── inject keyframes into <head> once, never inside JSX ──────────────────────
+// ── inject keyframes into <head> once ────────────────────────────────────────
 const STYLES = `
   @keyframes priceDrop {
     0%   { transform: scale(1);    background: transparent; }
-    20%  { transform: scale(1.18); background: rgba(16,185,129,0.18); border-radius: 8px; }
-    60%  { transform: scale(1.08); background: rgba(16,185,129,0.10); }
+    20%  { transform: scale(1.18); background: rgba(34,197,94,0.18); border-radius: 8px; }
+    60%  { transform: scale(1.08); background: rgba(34,197,94,0.10); }
     100% { transform: scale(1);    background: transparent; }
   }
   @keyframes priceRise {
     0%   { transform: scale(1);   background: transparent; }
-    20%  { transform: scale(1.1); background: rgba(239,68,68,0.14); border-radius: 8px; }
+    20%  { transform: scale(1.1); background: rgba(244,63,94,0.14); border-radius: 8px; }
     100% { transform: scale(1);   background: transparent; }
   }
   @keyframes badgeIn {
@@ -34,8 +32,8 @@ const STYLES = `
     to   { opacity: 1; transform: translateY(0)    scale(1);   }
   }
   @keyframes pulseGlow {
-    0%,100% { box-shadow: 0 0 0 0   rgba(16,185,129,0.5); }
-    50%     { box-shadow: 0 0 0 10px rgba(16,185,129,0);   }
+    0%,100% { box-shadow: 0 0 0 0   rgba(34,197,94,0.5); }
+    50%     { box-shadow: 0 0 0 10px rgba(34,197,94,0);   }
   }
   @keyframes liveBlip {
     0%,100% { opacity: 1;   }
@@ -55,7 +53,7 @@ const STYLES = `
 
 function injectStyles() {
   if (typeof document === "undefined") return;
-  if (document.getElementById("product-card-styles")) return; // inject once
+  if (document.getElementById("product-card-styles")) return;
   const tag = document.createElement("style");
   tag.id = "product-card-styles";
   tag.textContent = STYLES;
@@ -92,22 +90,21 @@ const ProductCard = ({ product: initialProduct }) => {
   const router = useRouter();
   const supabase = createClient();
 
-  // inject CSS into <head> on mount
   useEffect(() => { injectStyles(); }, []);
 
-  const [product, setProduct]           = useState(initialProduct);
-  const [priceFlash, setPriceFlash]     = useState(null); // "drop" | "rise" | null
-  const [dropPct, setDropPct]           = useState(null);
-  const prevPrice                        = useRef(initialProduct.current_price);
+  const [product, setProduct]               = useState(initialProduct);
+  const [priceFlash, setPriceFlash]         = useState(null);
+  const [dropPct, setDropPct]               = useState(null);
+  const prevPrice                            = useRef(initialProduct.current_price);
 
-  const [deleting, setDeleting]         = useState(false);
-  const [showConfirm, setShowConfirm]   = useState(false);
-  const [showChart, setShowChart]       = useState(false);
+  const [deleting, setDeleting]             = useState(false);
+  const [showConfirm, setShowConfirm]       = useState(false);
+  const [showChart, setShowChart]           = useState(false);
   const [showTargetInput, setShowTargetInput] = useState(false);
-  const [targetInput, setTargetInput]   = useState(initialProduct.target_price || "");
-  const [saving, setSaving]             = useState(false);
-  const [saved, setSaved]               = useState(false);
-  const [imgLoaded, setImgLoaded]       = useState(false);
+  const [targetInput, setTargetInput]       = useState(initialProduct.target_price || "");
+  const [saving, setSaving]                 = useState(false);
+  const [saved, setSaved]                   = useState(false);
+  const [imgLoaded, setImgLoaded]           = useState(false);
 
   const currencyMap = { INR: "₹", USD: "$", EUR: "€", GBP: "£" };
   const currency    = currencyMap[product.currency] || "₹";
@@ -150,7 +147,7 @@ const ProductCard = ({ product: initialProduct }) => {
     return () => supabase.removeChannel(channel);
   }, [product.id]);
 
-  // ── handlers ──────────────────────────────────────────────────────────────
+  // ── handlers ─────────────────────────────────────────────────────────────
   const handleDelete = async () => {
     try {
       setDeleting(true);
@@ -185,27 +182,33 @@ const ProductCard = ({ product: initialProduct }) => {
     router.refresh();
   };
 
-  // ── price color class ─────────────────────────────────────────────────────
-  const priceColorClass =
-    priceFlash === "drop" ? "text-emerald-500" :
-    priceFlash === "rise" ? "text-red-500"     :
-    "text-orange-500";
+  const priceColorStyle =
+    priceFlash === "drop" ? { color: "#22c55e" } :
+    priceFlash === "rise" ? { color: "#f43f5e" } :
+    { color: "#6c63ff" };
 
   const priceAnimClass =
     priceFlash === "drop" ? "pc-price-drop" :
     priceFlash === "rise" ? "pc-price-rise"  : "";
 
   return (
-    <Card
-      className={`
-        flex flex-col overflow-hidden transition-all duration-300
-        hover:shadow-xl hover:-translate-y-1
-        ${priceFlash === "drop" ? "pc-pulse-glow ring-2 ring-emerald-400/50" : ""}
-      `}
+    <div
+      style={{
+        background: "#111118",
+        border: `1px solid ${priceFlash === "drop" ? "rgba(34,197,94,0.4)" : isTargetMet ? "rgba(34,197,94,0.4)" : "#222230"}`,
+        borderRadius: 16,
+        overflow: "hidden",
+        display: "flex",
+        flexDirection: "column",
+        transition: "all 0.3s",
+        opacity: deleting ? 0.4 : 1,
+        boxShadow: priceFlash === "drop" ? "0 0 0 2px rgba(34,197,94,0.2)" : isTargetMet ? "0 0 0 1px rgba(34,197,94,0.15)" : "none",
+      }}
+      className={priceFlash === "drop" ? "pc-pulse-glow" : ""}
     >
-      {/* ── IMAGE ──────────────────────────────────────────────────────────── */}
-      {product.image_url && (
-        <div className="relative w-full h-48 bg-gray-100 overflow-hidden">
+      {/* ── IMAGE ────────────────────────────────────────────────────────── */}
+      <div style={{ position: "relative", width: "100%", height: 160, background: "linear-gradient(135deg,#1a1a2e,#16213e)", overflow: "hidden" }}>
+        {product.image_url ? (
           <Image
             src={product.image_url}
             alt={product.name}
@@ -213,167 +216,255 @@ const ProductCard = ({ product: initialProduct }) => {
             sizes="(max-width: 768px) 100vw, 33vw"
             priority={false}
             placeholder="empty"
-            className={`object-contain p-2 transition-opacity duration-500 ${imgLoaded ? "opacity-100" : "opacity-0"}`}
+            style={{ objectFit: "contain", padding: 12, opacity: imgLoaded ? 1 : 0, transition: "opacity 0.5s" }}
             onLoad={() => setImgLoaded(true)}
+            unoptimized
           />
+        ) : (
+          <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 48 }}>🛍️</div>
+        )}
 
-          {/* LIVE badge */}
-          <div className="absolute top-2 right-2 flex items-center gap-1 bg-black/60 backdrop-blur-sm text-white text-[10px] font-semibold px-2 py-0.5 rounded-full z-10">
-            <span className="pc-live-blip w-1.5 h-1.5 rounded-full bg-emerald-400 inline-block" />
-            LIVE
-          </div>
+        {/* Gradient overlay */}
+        <div style={{ position: "absolute", inset: 0, background: "linear-gradient(180deg,transparent 50%,#111118)" }} />
 
-          {/* Target met badge */}
-          {isTargetMet && (
-            <div className="pc-badge-in absolute top-2 left-2 bg-emerald-500 text-white text-xs font-bold px-2 py-1 rounded-full animate-pulse z-10">
-              🎯 Target Reached!
-            </div>
-          )}
-
-          {/* Price drop % badge */}
-          {priceFlash === "drop" && dropPct && (
-            <div className="pc-badge-in absolute bottom-2 left-2 flex items-center gap-1 bg-emerald-500 text-white text-xs font-bold px-2 py-1 rounded-full z-10 shadow-lg">
-              <TrendingDown className="w-3 h-3" />
-              -{dropPct}%
-            </div>
-          )}
-
-          {/* Price rise badge */}
-          {priceFlash === "rise" && (
-            <div className="pc-badge-in absolute bottom-2 left-2 flex items-center gap-1 bg-red-500 text-white text-xs font-bold px-2 py-1 rounded-full z-10 shadow-lg">
-              ↑ Price up
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* ── HEADER ─────────────────────────────────────────────────────────── */}
-      <CardHeader className="pb-1 pt-3 px-4">
-        <h3 className="font-semibold text-sm line-clamp-2">{product.name}</h3>
-      </CardHeader>
-
-      <CardContent className="px-4 pb-3 flex flex-col gap-3 flex-1">
-
-        {/* ── PRICE ────────────────────────────────────────────────────────── */}
-        <div className="flex items-center gap-2 flex-wrap">
-          <span
-            className={`text-xl font-bold tabular-nums transition-colors duration-300 ${priceColorClass} ${priceAnimClass}`}
-            style={{ display: "inline-block" }} /* needed for transform to work on inline */
-          >
-            {currency} {animatedPrice.toLocaleString("en-IN")}
-          </span>
-
-          {priceFlash === "drop" ? (
-            <span className="pc-slide-up flex items-center gap-0.5 text-xs font-semibold text-emerald-600 bg-emerald-50 border border-emerald-200 px-1.5 py-0.5 rounded-full">
-              <TrendingDown className="w-3 h-3" /> Dropped!
-            </span>
-          ) : priceFlash === "rise" ? (
-            <span className="pc-slide-up text-xs font-semibold text-red-500 bg-red-50 border border-red-200 px-1.5 py-0.5 rounded-full">
-              ↑ Rose
-            </span>
-          ) : (
-            <span className="text-xs text-muted-foreground">↘ Tracking</span>
-          )}
+        {/* LIVE badge */}
+        <div style={{
+          position: "absolute", top: 10, right: 10,
+          display: "flex", alignItems: "center", gap: 4,
+          background: "rgba(0,0,0,0.65)", backdropFilter: "blur(6px)",
+          color: "#fff", fontSize: 10, fontWeight: 600,
+          padding: "3px 8px", borderRadius: 20, zIndex: 10,
+        }}>
+          <span className="pc-live-blip" style={{ width: 6, height: 6, borderRadius: "50%", background: "#22c55e", display: "inline-block" }} />
+          LIVE
         </div>
 
-        {/* ── TARGET BADGE ─────────────────────────────────────────────────── */}
-        {product.target_price && (
-          <div className={`flex justify-between text-xs px-3 py-2 rounded-lg border transition-all duration-300 ${
-            isTargetMet
-              ? "bg-emerald-50 border-emerald-200 text-emerald-700"
-              : "bg-orange-50 border-orange-200 text-orange-700"
-          }`}>
-            <span>
-              🎯 Alert: {currency}{parseFloat(product.target_price).toLocaleString("en-IN")}
-            </span>
-            <button onClick={handleRemoveTarget} className="text-gray-400 hover:text-red-500">✕</button>
+        {/* Target met badge */}
+        {isTargetMet && (
+          <div className="pc-badge-in" style={{
+            position: "absolute", top: 10, left: 10,
+            background: "#22c55e", color: "#fff",
+            fontSize: 10, fontWeight: 700, padding: "3px 10px",
+            borderRadius: 20, zIndex: 10,
+          }}>
+            🎯 Target Reached!
           </div>
         )}
 
-        {/* ── TARGET INPUT ──────────────────────────────────────────────────── */}
+        {/* Price drop % badge */}
+        {priceFlash === "drop" && dropPct && (
+          <div className="pc-badge-in" style={{
+            position: "absolute", bottom: 10, left: 10,
+            display: "flex", alignItems: "center", gap: 4,
+            background: "#22c55e", color: "#fff",
+            fontSize: 11, fontWeight: 700, padding: "3px 10px",
+            borderRadius: 20, zIndex: 10,
+          }}>
+            <TrendingDown style={{ width: 12, height: 12 }} />
+            -{dropPct}%
+          </div>
+        )}
+
+        {/* Price rise badge */}
+        {priceFlash === "rise" && (
+          <div className="pc-badge-in" style={{
+            position: "absolute", bottom: 10, left: 10,
+            background: "#f43f5e", color: "#fff",
+            fontSize: 11, fontWeight: 700, padding: "3px 10px",
+            borderRadius: 20, zIndex: 10,
+          }}>
+            ↑ Price up
+          </div>
+        )}
+
+        {/* Delete button */}
+        <button
+          onClick={() => setShowConfirm(true)}
+          disabled={deleting}
+          style={{
+            position: "absolute", top: 10,
+            left: isTargetMet ? "auto" : 10,
+            right: isTargetMet ? 44 : "auto",
+            background: "rgba(0,0,0,0.5)", color: "#888899",
+            border: "none", width: 28, height: 28, borderRadius: "50%",
+            cursor: "pointer", fontSize: 11,
+            display: "flex", alignItems: "center", justifyContent: "center",
+            zIndex: 10,
+          }}
+          title="Remove product"
+        >
+          <Trash2 style={{ width: 12, height: 12 }} />
+        </button>
+      </div>
+
+      {/* ── BODY ─────────────────────────────────────────────────────────── */}
+      <div style={{ padding: "14px 16px", display: "flex", flexDirection: "column", gap: 10, flex: 1 }}>
+
+        {/* Source + name */}
+        <div>
+          <div style={{ fontSize: 10, color: "#555566", textTransform: "uppercase", letterSpacing: ".5px", marginBottom: 5 }}>
+            {(() => { try { return new URL(product.url).hostname.replace("www.", ""); } catch { return ""; } })()}
+          </div>
+          <a href={product.url} target="_blank" rel="noreferrer" style={{ color: "#f0f0f5", textDecoration: "none" }}>
+            <p style={{ fontSize: 13, fontWeight: 500, lineHeight: 1.4, margin: 0,
+              display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>
+              {product.name}
+            </p>
+          </a>
+        </div>
+
+        {/* ── PRICE ────────────────────────────────────────────────────── */}
+        <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+          <span
+            className={priceAnimClass}
+            style={{
+              fontSize: 22, fontWeight: 700,
+              fontFamily: "'DM Mono', monospace",
+              letterSpacing: -1, display: "inline-block",
+              ...priceColorStyle,
+            }}
+          >
+            {currency}{animatedPrice.toLocaleString("en-IN")}
+          </span>
+
+          {priceFlash === "drop" ? (
+            <span className="pc-slide-up" style={{
+              display: "flex", alignItems: "center", gap: 3,
+              fontSize: 11, fontWeight: 600, color: "#22c55e",
+              background: "rgba(34,197,94,0.12)", padding: "2px 8px", borderRadius: 20,
+            }}>
+              <TrendingDown style={{ width: 11, height: 11 }} /> Dropped!
+            </span>
+          ) : priceFlash === "rise" ? (
+            <span className="pc-slide-up" style={{
+              fontSize: 11, fontWeight: 600, color: "#f43f5e",
+              background: "rgba(244,63,94,0.12)", padding: "2px 8px", borderRadius: 20,
+            }}>
+              ↑ Rose
+            </span>
+          ) : (
+            <span style={{ fontSize: 11, color: "#555566" }}>↘ Tracking</span>
+          )}
+        </div>
+
+        {/* ── TARGET BADGE ─────────────────────────────────────────────── */}
+        {product.target_price && (
+          <div style={{
+            display: "flex", justifyContent: "space-between", alignItems: "center",
+            fontSize: 12, padding: "8px 12px", borderRadius: 8,
+            border: `1px solid ${isTargetMet ? "rgba(34,197,94,0.3)" : "rgba(245,158,11,0.3)"}`,
+            background: isTargetMet ? "rgba(34,197,94,0.08)" : "rgba(245,158,11,0.08)",
+            color: isTargetMet ? "#22c55e" : "#f59e0b",
+          }}>
+            <span>🎯 Alert: {currency}{parseFloat(product.target_price).toLocaleString("en-IN")}</span>
+            <button onClick={handleRemoveTarget}
+              style={{ background: "none", border: "none", color: "#555566", cursor: "pointer", fontSize: 12 }}>
+              ✕
+            </button>
+          </div>
+        )}
+
+        {/* ── TARGET INPUT ──────────────────────────────────────────────── */}
         {showTargetInput && (
-          <div className="flex gap-2 items-center animate-in fade-in slide-in-from-bottom-2">
-            <Input
+          <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+            <input
               type="number"
               placeholder={`Target price (${currency})`}
               value={targetInput}
               onChange={(e) => setTargetInput(e.target.value)}
-              className="h-9 text-sm focus:ring-2 focus:ring-orange-400"
+              style={{
+                flex: 1, background: "#18181f", border: "1px solid #2a2a3a",
+                borderRadius: 8, padding: "7px 12px", color: "#f0f0f5",
+                fontSize: 13, outline: "none", fontFamily: "'DM Mono', monospace",
+              }}
             />
-            <Button
-              size="sm"
+            <button
               onClick={handleSetTarget}
               disabled={saving || !targetInput}
-              className="h-9 bg-orange-500 hover:bg-orange-600 text-white px-4"
+              style={{
+                background: saving ? "#2a2a3a" : "#22c55e",
+                color: "#fff", border: "none",
+                borderRadius: 8, padding: "7px 14px",
+                fontSize: 12, fontWeight: 600, cursor: "pointer",
+                display: "flex", alignItems: "center", gap: 4,
+              }}
             >
-              {saved ? <Check className="w-4 h-4" /> : saving ? "…" : "Set"}
-            </Button>
+              {saved ? <Check style={{ width: 14, height: 14 }} /> : saving ? "…" : "Set"}
+            </button>
           </div>
         )}
 
-        {/* ── CONFIRM DELETE ────────────────────────────────────────────────── */}
-        {showConfirm ? (
-          <div className="flex items-center gap-2 p-2 bg-red-50 border border-red-200 rounded-lg">
-            <span className="text-xs text-red-600 flex-1">Remove this product?</span>
-            <button onClick={handleDelete} className="text-xs bg-red-500 text-white px-3 py-1 rounded-md">Yes</button>
-            <button onClick={() => setShowConfirm(false)} className="text-xs bg-gray-100 px-3 py-1 rounded-md">No</button>
+        {/* ── CONFIRM DELETE ────────────────────────────────────────────── */}
+        {showConfirm && (
+          <div style={{
+            display: "flex", alignItems: "center", gap: 8,
+            padding: "10px 12px", borderRadius: 8,
+            background: "rgba(244,63,94,0.08)", border: "1px solid rgba(244,63,94,0.25)",
+          }}>
+            <span style={{ fontSize: 12, color: "#f43f5e", flex: 1 }}>Remove this product?</span>
+            <button onClick={handleDelete} style={{ background: "#f43f5e", color: "#fff", border: "none", borderRadius: 6, padding: "4px 12px", fontSize: 12, cursor: "pointer" }}>Yes</button>
+            <button onClick={() => setShowConfirm(false)} style={{ background: "#18181f", color: "#888899", border: "1px solid #222230", borderRadius: 6, padding: "4px 12px", fontSize: 12, cursor: "pointer" }}>No</button>
           </div>
-        ) : (
-          <div className="grid grid-cols-3 gap-2 mt-auto">
-            <Button variant="outline" size="sm" asChild className="hover:scale-105 transition">
-              <a href={product.url} target="_blank" rel="noreferrer">
-                <ExternalLink className="w-3 h-3" /> View
-              </a>
-            </Button>
-            <Button
-              variant="outline" size="sm"
+        )}
+
+        {/* ── ACTION BUTTONS ────────────────────────────────────────────── */}
+        {!showConfirm && (
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginTop: "auto" }}>
+            <a
+              href={product.url} target="_blank" rel="noreferrer"
+              style={{
+                display: "flex", alignItems: "center", justifyContent: "center", gap: 5,
+                background: "transparent", border: "1px solid #2a2a3a",
+                color: "#888899", borderRadius: 8, padding: "7px 0",
+                fontSize: 12, textDecoration: "none", transition: "all .2s",
+              }}
+              onMouseEnter={e => { e.currentTarget.style.borderColor = "#6c63ff"; e.currentTarget.style.color = "#6c63ff"; }}
+              onMouseLeave={e => { e.currentTarget.style.borderColor = "#2a2a3a"; e.currentTarget.style.color = "#888899"; }}
+            >
+              <ExternalLink style={{ width: 12, height: 12 }} /> View
+            </a>
+            <button
               onClick={() => setShowTargetInput(!showTargetInput)}
-              className="hover:scale-105 transition"
+              style={{
+                display: "flex", alignItems: "center", justifyContent: "center", gap: 5,
+                background: "transparent",
+                border: `1px solid ${product.target_price ? "rgba(245,158,11,0.4)" : "#2a2a3a"}`,
+                color: product.target_price ? "#f59e0b" : "#888899",
+                borderRadius: 8, padding: "7px 0",
+                fontSize: 12, cursor: "pointer", transition: "all .2s",
+              }}
             >
-              {product.target_price ? <BellOff className="w-3 h-3" /> : <Bell className="w-3 h-3" />}
-              Alert
-            </Button>
-            <Button
-              variant="outline" size="sm"
-              onClick={() => setShowConfirm(true)}
-              className="text-red-600 hover:bg-red-50 hover:scale-105 transition"
-            >
-              <Trash2 className="w-3 h-3" /> Remove
-            </Button>
+              {product.target_price
+                ? <><BellOff style={{ width: 12, height: 12 }} /> Alert</>
+                : <><Bell style={{ width: 12, height: 12 }} /> Alert</>
+              }
+            </button>
           </div>
         )}
 
-        {/* 🧪 TEMP: test button — delete after confirming animations work */}
-        <button
-          className="text-[10px] text-gray-300 hover:text-gray-400 underline text-center"
-          onClick={() => {
-            const fakePrice = (product.current_price ?? 1000) - 500;
-            setProduct(p => ({ ...p, current_price: fakePrice }));
-            setPriceFlash("drop");
-            setDropPct("3.5");
-            setTimeout(() => setPriceFlash(null), 2500);
-          }}
-        >
-          [test drop animation]
-        </button>
-
-        {/* ── CHART TOGGLE ─────────────────────────────────────────────────── */}
+        {/* ── CHART TOGGLE ─────────────────────────────────────────────── */}
         <button
           onClick={() => setShowChart(!showChart)}
-          className="flex justify-center items-center gap-2 text-xs text-muted-foreground hover:text-orange-500 border-t pt-2"
+          style={{
+            display: "flex", justifyContent: "center", alignItems: "center", gap: 6,
+            fontSize: 11, color: showChart ? "#6c63ff" : "#555566",
+            background: "none", border: "none", borderTop: "1px solid #222230",
+            paddingTop: 10, cursor: "pointer", transition: "color .2s",
+            fontFamily: "'Sora', sans-serif",
+          }}
         >
-          <BarChart2 className="w-3 h-3" />
-          {showChart ? "Hide History" : "Show History"}
+          <BarChart2 style={{ width: 12, height: 12 }} />
+          {showChart ? "Hide History ▴" : "Price History ▾"}
         </button>
+      </div>
 
-      </CardContent>
-
+      {/* ── CHART ────────────────────────────────────────────────────────── */}
       {showChart && (
-        <CardFooter className="pt-0 px-4 pb-4">
-          <PriceChart productId={product.id} />
-        </CardFooter>
+        <div style={{ padding: "0 16px 16px", borderTop: "1px solid #222230" }}>
+          <PriceChart productId={product.id} currency={product.currency} />
+        </div>
       )}
-    </Card>
+    </div>
   );
 };
 

@@ -90,6 +90,41 @@ const STYLES = `
   .pc-scan-line    { animation: scanLine 4s ease-in-out infinite 2s; pointer-events: none; }
   .pc-corner       { animation: cornerGlow 2.8s ease-in-out infinite; }
   .pc-border-pulse { animation: borderShimmer 3s ease-in-out infinite; }
+
+  /* ── Badge & button hovers ── */
+  .pc-live-badge {
+    cursor: default;
+    transition: background .2s, border-color .2s, transform .2s, box-shadow .2s;
+  }
+  .pc-live-badge:hover {
+    background: rgba(34,197,94,0.18) !important;
+    border-color: rgba(34,197,94,0.6) !important;
+    transform: scale(1.06);
+    box-shadow: 0 0 10px rgba(34,197,94,0.25);
+  }
+  .pc-target-badge {
+    cursor: default;
+    transition: background .2s, border-color .2s, transform .2s, box-shadow .2s;
+  }
+  .pc-target-badge:hover {
+    background: rgba(34,197,94,0.28) !important;
+    border-color: rgba(34,197,94,0.7) !important;
+    transform: scale(1.06);
+    box-shadow: 0 0 14px rgba(34,197,94,0.3);
+  }
+  .pc-delete-btn {
+    transition: background .18s, color .18s, border-color .18s, transform .18s, box-shadow .18s;
+  }
+  .pc-delete-btn:hover {
+    background: rgba(244,63,94,0.75) !important;
+    border-color: rgba(244,63,94,0.5) !important;
+    color: #fff !important;
+    transform: scale(1.12);
+    box-shadow: 0 0 12px rgba(244,63,94,0.4);
+  }
+  .pc-delete-btn:active {
+    transform: scale(0.96);
+  }
 `;
 
 function injectStyles() {
@@ -316,7 +351,7 @@ const ProductCard = ({ product: initialProduct }) => {
         }} />
 
         {/* LIVE badge */}
-        <div style={{
+        <div className="pc-live-badge" style={{
           position: "absolute", top: 10, right: 10, zIndex: 8,
           display: "flex", alignItems: "center", gap: 5,
           background: "rgba(0,0,0,0.55)", backdropFilter: "blur(10px)",
@@ -330,7 +365,7 @@ const ProductCard = ({ product: initialProduct }) => {
 
         {/* Target reached badge */}
         {isTargetMet && (
-          <div className="pc-badge-in" style={{
+          <div className="pc-badge-in pc-target-badge" style={{
             position: "absolute", top: 10, left: 10, zIndex: 8,
             display: "flex", alignItems: "center", gap: 5,
             background: "rgba(34,197,94,0.15)",
@@ -375,6 +410,7 @@ const ProductCard = ({ product: initialProduct }) => {
         {/* Delete button */}
         <button
           type="button"
+          className="pc-delete-btn"
           onClick={(e) => { e.stopPropagation(); setShowConfirm(true); }}
           disabled={deleting}
           style={{
@@ -383,16 +419,13 @@ const ProductCard = ({ product: initialProduct }) => {
             right: isTargetMet ? 10 : "auto",
             zIndex: 9,
             background: "rgba(0,0,0,0.55)", backdropFilter: "blur(10px)",
-            color: "#555566", border: "1px solid rgba(255,255,255,0.07)",
-            width: 28, height: 28, borderRadius: "50%",
+            color: "#555566", border: "1px solid rgba(255,255,255,0.1)",
+            width: 30, height: 30, borderRadius: "50%",
             cursor: "pointer", display: "flex",
             alignItems: "center", justifyContent: "center",
-            transition: "all .2s",
           }}
-          onMouseEnter={e => { e.currentTarget.style.background = "rgba(244,63,94,0.7)"; e.currentTarget.style.color = "#fff"; }}
-          onMouseLeave={e => { e.currentTarget.style.background = "rgba(0,0,0,0.55)"; e.currentTarget.style.color = "#555566"; }}
         >
-          <Trash2 style={{ width: 11, height: 11 }} />
+          <Trash2 style={{ width: 12, height: 12 }} />
         </button>
       </div>
 

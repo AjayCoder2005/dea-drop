@@ -309,8 +309,6 @@ const ProductCard = ({ product: initialProduct }) => {
                 objectFit: "contain",
                 padding: "14px",
                 opacity: imgLoaded ? 1 : 0,
-                mixBlendMode: "luminosity",
-                filter: "brightness(0.92) contrast(1.05)",
               }}
               onLoad={() => setImgLoaded(true)}
               onError={() => setImgError(true)}

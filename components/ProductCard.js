@@ -125,6 +125,44 @@ const STYLES = `
   .pc-delete-btn:active {
     transform: scale(0.96);
   }
+
+  /* ── Card entrance ── */
+  @keyframes cardEnter {
+    from { opacity: 0; transform: translateY(18px) scale(0.97); }
+    to   { opacity: 1; transform: translateY(0)    scale(1);    }
+  }
+  .pc-card-enter { animation: cardEnter 0.45s cubic-bezier(0.34,1.2,0.64,1) both; }
+
+  /* ── Card hover lift ── */
+  .pc-card {
+    transition: transform 0.25s cubic-bezier(0.25,0.46,0.45,0.94),
+                box-shadow 0.25s cubic-bezier(0.25,0.46,0.45,0.94),
+                border-color 0.3s;
+  }
+  .pc-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 16px 40px rgba(0,0,0,0.45), 0 0 0 1px rgba(108,99,255,0.15);
+  }
+
+  /* ── Action button press ── */
+  .pc-action-btn {
+    transition: all 0.2s cubic-bezier(0.25,0.46,0.45,0.94) !important;
+  }
+  .pc-action-btn:hover  { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(108,99,255,0.2); }
+  .pc-action-btn:active { transform: scale(0.97); }
+
+  /* ── Alert badge ── */
+  .pc-alert-badge { transition: transform 0.2s, box-shadow 0.2s; }
+  .pc-alert-badge:hover { transform: scale(1.02); box-shadow: 0 0 12px rgba(167,139,250,0.2); }
+
+  /* ── Chart toggle ── */
+  .pc-chart-toggle { transition: color 0.2s, transform 0.15s !important; }
+  .pc-chart-toggle:hover  { transform: scale(1.03); }
+  .pc-chart-toggle:active { transform: scale(0.97); }
+
+  /* ── Price number ── */
+  .pc-price-num { transition: color 0.3s, transform 0.2s; display: inline-block; }
+  .pc-price-num:hover { transform: scale(1.06); }
 `;
 
 function injectStyles() {
@@ -258,7 +296,7 @@ const ProductCard = ({ product: initialProduct }) => {
 
   return (
     <div
-      className={priceFlash === "drop" ? "pc-pulse-glow" : ""}
+      className={`pc-card pc-card-enter${priceFlash === "drop" ? " pc-pulse-glow" : ""}`}
       style={{
         background: "#0e0e14",
         border: `1px solid ${priceFlash === "drop" || isTargetMet ? "rgba(34,197,94,0.35)" : "#1e1e2a"}`,
@@ -451,7 +489,7 @@ const ProductCard = ({ product: initialProduct }) => {
         {/* Price row */}
         <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
           <span
-            className={priceFlash === "drop" ? "pc-price-drop" : priceFlash === "rise" ? "pc-price-rise" : ""}
+            className={`pc-price-num${priceFlash === "drop" ? " pc-price-drop" : priceFlash === "rise" ? " pc-price-rise" : ""}`}
             style={{ fontSize: 24, fontWeight: 700, fontFamily: "'DM Mono', monospace", letterSpacing: -1, display: "inline-block", color: priceColor, transition: "color .3s" }}
           >
             {currency}{animatedPrice.toLocaleString("en-IN")}
@@ -475,7 +513,7 @@ const ProductCard = ({ product: initialProduct }) => {
 
         {/* Alert badge — BellRing icon */}
         {product.target_price && (
-          <div style={{
+          <div className="pc-alert-badge" style={{
             display: "flex", justifyContent: "space-between", alignItems: "center",
             fontSize: 14, padding: "9px 12px", borderRadius: 10,
             border: `1px solid ${isTargetMet ? "rgba(34,197,94,0.25)" : "rgba(167,139,250,0.2)"}`,
@@ -542,7 +580,8 @@ const ProductCard = ({ product: initialProduct }) => {
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginTop: "auto" }}>
             <a
               href={product.url} target="_blank" rel="noreferrer"
-              style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6, background: "transparent", border: "1px solid #1e1e2a", color: "#555566", borderRadius: 10, padding: "8px 0", fontSize: 12, textDecoration: "none", transition: "all .2s", fontFamily: "'Sora', sans-serif" }}
+              className="pc-action-btn"
+              style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6, background: "transparent", border: "1px solid #1e1e2a", color: "#555566", borderRadius: 10, padding: "8px 0", fontSize: 12, textDecoration: "none", fontFamily: "'Sora', sans-serif" }}
               onMouseEnter={e => { e.currentTarget.style.borderColor = "#6c63ff"; e.currentTarget.style.color = "#a78bfa"; e.currentTarget.style.background = "rgba(108,99,255,0.06)"; }}
               onMouseLeave={e => { e.currentTarget.style.borderColor = "#1e1e2a"; e.currentTarget.style.color = "#555566"; e.currentTarget.style.background = "transparent"; }}
             >
@@ -550,6 +589,7 @@ const ProductCard = ({ product: initialProduct }) => {
             </a>
             <button
               type="button"
+              className="pc-action-btn"
               onClick={(e) => { e.stopPropagation(); setShowTargetInput(!showTargetInput); }}
               style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6, background: showTargetInput ? "rgba(167,139,250,0.08)" : "transparent", border: `1px solid ${product.target_price ? "rgba(167,139,250,0.3)" : "#1e1e2a"}`, color: product.target_price ? "#a78bfa" : "#555566", borderRadius: 10, padding: "8px 0", fontSize: 12, cursor: "pointer", transition: "all .2s", fontFamily: "'Sora', sans-serif" }}
               onMouseEnter={e => { e.currentTarget.style.borderColor = "#a78bfa"; e.currentTarget.style.color = "#a78bfa"; e.currentTarget.style.background = "rgba(167,139,250,0.06)"; }}
@@ -565,6 +605,7 @@ const ProductCard = ({ product: initialProduct }) => {
         {/* Chart toggle */}
         <button
           type="button"
+          className="pc-chart-toggle"
           onClick={handleToggleChart}
           style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: 6, fontSize: 11, color: showChart ? "#6c63ff" : "#333340", background: "none", border: "none", borderTop: "1px solid #1a1a24", paddingTop: 10, cursor: "pointer", transition: "color .2s", fontFamily: "'Sora', sans-serif" }}
           onMouseEnter={e => e.currentTarget.style.color = "#6c63ff"}

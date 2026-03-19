@@ -104,7 +104,8 @@ const PriceChart = ({ productId, currency = "INR" }) => {
       <div style={{ width: "100%", padding: "20px 0", textAlign: "center" }}>
         <p style={{ fontSize: 12, color: "#f43f5e", marginBottom: 10 }}>⚠️ Could not load price history</p>
         <button
-          onClick={fetchData}
+          type="button"
+          onClick={(e) => { e.stopPropagation(); fetchData(); }}
           style={{ background: "transparent", border: "1px solid #2a2a3a", color: "#888899", borderRadius: 8, padding: "5px 16px", fontSize: 11, cursor: "pointer", transition: "all .2s" }}
           onMouseEnter={e => { e.currentTarget.style.borderColor = "#6c63ff"; e.currentTarget.style.color = "#6c63ff"; }}
           onMouseLeave={e => { e.currentTarget.style.borderColor = "#2a2a3a"; e.currentTarget.style.color = "#888899"; }}
@@ -176,7 +177,7 @@ const PriceChart = ({ productId, currency = "INR" }) => {
         <ResponsiveContainer width="100%" height="100%">
           <AreaChart data={priceHistory} margin={{ top: 5, right: 5, left: 0, bottom: 5 }}>
             <defs>
-              {/* ✅ unique gradient ID per card instance — no cross-card bleed */}
+              {/* unique gradient ID per card instance — no cross-card bleed */}
               <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
                 <stop offset="5%"  stopColor="#22c55e" stopOpacity={0.25} />
                 <stop offset="95%" stopColor="#22c55e" stopOpacity={0}    />

@@ -121,7 +121,9 @@ const ProductCard = ({ product: initialProduct }) => {
   const animatedPrice = useCountUp(product.current_price ?? 0, 700);
   const isTargetMet   = product.target_price && product.current_price <= product.target_price;
 
-  const handleToggleChart = () => {
+  // ── FIX: stopPropagation so only THIS card's chart toggles ───────────────
+  const handleToggleChart = (e) => {
+    e.stopPropagation();
     if (!showChart) { setChartKey(k => k + 1); setShowChart(true); }
     else setShowChart(false);
   };
@@ -155,7 +157,8 @@ const ProductCard = ({ product: initialProduct }) => {
     return () => supabase.removeChannel(channel);
   }, [product.id]);
 
-  const handleDelete = async () => {
+  const handleDelete = async (e) => {
+    e.stopPropagation();
     try {
       setDeleting(true); setShowConfirm(false);
       await deleteProduct(product.id);
@@ -166,7 +169,8 @@ const ProductCard = ({ product: initialProduct }) => {
     }
   };
 
-  const handleSetTarget = async () => {
+  const handleSetTarget = async (e) => {
+    e.stopPropagation();
     try {
       setSaving(true);
       await setTargetPrice(product.id, parseFloat(targetInput));
@@ -178,7 +182,8 @@ const ProductCard = ({ product: initialProduct }) => {
     } finally { setSaving(false); }
   };
 
-  const handleRemoveTarget = async () => {
+  const handleRemoveTarget = async (e) => {
+    e.stopPropagation();
     await setTargetPrice(product.id, null);
     setTargetInput("");
     toast.success("Alert removed");
@@ -227,7 +232,7 @@ const ProductCard = ({ product: initialProduct }) => {
           </div>
         )}
 
-        {/* Actual image — dark background so white-bg images blend */}
+        {/* Actual image */}
         {product.image_url && !imgError && (
           <Image
             src={product.image_url}
@@ -239,7 +244,6 @@ const ProductCard = ({ product: initialProduct }) => {
               padding: "14px",
               opacity: imgLoaded ? 1 : 0,
               transition: "opacity 0.4s ease",
-              // mix-blend-mode makes white product images transparent on dark bg
               mixBlendMode: "luminosity",
               filter: "brightness(0.92) contrast(1.05)",
             }}
@@ -317,7 +321,9 @@ const ProductCard = ({ product: initialProduct }) => {
 
         {/* ── Delete button ── */}
         <button
-          onClick={() => setShowConfirm(true)} disabled={deleting}
+          type="button"
+          onClick={(e) => { e.stopPropagation(); setShowConfirm(true); }}
+          disabled={deleting}
           style={{
             position: "absolute",
             top: 10,
@@ -396,7 +402,10 @@ const ProductCard = ({ product: initialProduct }) => {
               Alert: {currency}{parseFloat(product.target_price).toLocaleString("en-IN")}
               {isTargetMet && <span style={{ fontSize: 10, background: "rgba(34,197,94,0.15)", padding: "1px 6px", borderRadius: 10, color: "#22c55e" }}>✓ Met</span>}
             </span>
-            <button onClick={handleRemoveTarget} style={{ background: "none", border: "none", color: "#333340", cursor: "pointer", fontSize: 13, lineHeight: 1, padding: "0 2px", transition: "color .2s" }}
+            <button
+              type="button"
+              onClick={handleRemoveTarget}
+              style={{ background: "none", border: "none", color: "#333340", cursor: "pointer", fontSize: 13, lineHeight: 1, padding: "0 2px", transition: "color .2s" }}
               onMouseEnter={e => e.currentTarget.style.color = "#f43f5e"}
               onMouseLeave={e => e.currentTarget.style.color = "#333340"}
             >✕</button>
@@ -417,6 +426,7 @@ const ProductCard = ({ product: initialProduct }) => {
               onBlur={e => e.target.style.borderColor = "#1e1e2a"}
             />
             <button
+              type="button"
               onClick={handleSetTarget}
               disabled={saving || !targetInput}
               style={{ background: saved ? "#22c55e" : saving ? "#1e1e2a" : "#6c63ff", color: "#fff", border: "none", borderRadius: 8, padding: "7px 16px", fontSize: 12, fontWeight: 600, cursor: saving ? "not-allowed" : "pointer", display: "flex", alignItems: "center", gap: 4, transition: "background .2s", flexShrink: 0 }}
@@ -430,8 +440,16 @@ const ProductCard = ({ product: initialProduct }) => {
         {showConfirm && (
           <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 12px", borderRadius: 10, background: "rgba(244,63,94,0.07)", border: "1px solid rgba(244,63,94,0.2)" }}>
             <span style={{ fontSize: 12, color: "#f43f5e", flex: 1 }}>Remove this product?</span>
-            <button onClick={handleDelete} style={{ background: "#f43f5e", color: "#fff", border: "none", borderRadius: 6, padding: "4px 14px", fontSize: 12, cursor: "pointer", fontWeight: 600 }}>Yes</button>
-            <button onClick={() => setShowConfirm(false)} style={{ background: "#18181f", color: "#888899", border: "1px solid #222230", borderRadius: 6, padding: "4px 12px", fontSize: 12, cursor: "pointer" }}>No</button>
+            <button
+              type="button"
+              onClick={handleDelete}
+              style={{ background: "#f43f5e", color: "#fff", border: "none", borderRadius: 6, padding: "4px 14px", fontSize: 12, cursor: "pointer", fontWeight: 600 }}
+            >Yes</button>
+            <button
+              type="button"
+              onClick={(e) => { e.stopPropagation(); setShowConfirm(false); }}
+              style={{ background: "#18181f", color: "#888899", border: "1px solid #222230", borderRadius: 6, padding: "4px 12px", fontSize: 12, cursor: "pointer" }}
+            >No</button>
           </div>
         )}
 
@@ -447,7 +465,8 @@ const ProductCard = ({ product: initialProduct }) => {
               <Eye style={{ width: 12, height: 12 }} /> View
             </a>
             <button
-              onClick={() => setShowTargetInput(!showTargetInput)}
+              type="button"
+              onClick={(e) => { e.stopPropagation(); setShowTargetInput(!showTargetInput); }}
               style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6, background: showTargetInput ? "rgba(167,139,250,0.08)" : "transparent", border: `1px solid ${product.target_price ? "rgba(167,139,250,0.3)" : "#1e1e2a"}`, color: product.target_price ? "#a78bfa" : "#555566", borderRadius: 10, padding: "8px 0", fontSize: 12, cursor: "pointer", transition: "all .2s", fontFamily: "'Sora', sans-serif" }}
               onMouseEnter={e => { e.currentTarget.style.borderColor = "#a78bfa"; e.currentTarget.style.color = "#a78bfa"; e.currentTarget.style.background = "rgba(167,139,250,0.06)"; }}
               onMouseLeave={e => { e.currentTarget.style.borderColor = product.target_price ? "rgba(167,139,250,0.3)" : "#1e1e2a"; e.currentTarget.style.color = product.target_price ? "#a78bfa" : "#555566"; e.currentTarget.style.background = showTargetInput ? "rgba(167,139,250,0.08)" : "transparent"; }}
@@ -459,8 +478,9 @@ const ProductCard = ({ product: initialProduct }) => {
           </div>
         )}
 
-        {/* ── Chart toggle ── */}
+        {/* ── Chart toggle ── FIX: type="button" + stopPropagation ── */}
         <button
+          type="button"
           onClick={handleToggleChart}
           style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: 6, fontSize: 11, color: showChart ? "#6c63ff" : "#333340", background: "none", border: "none", borderTop: "1px solid #1a1a24", paddingTop: 10, cursor: "pointer", transition: "color .2s", fontFamily: "'Sora', sans-serif" }}
           onMouseEnter={e => e.currentTarget.style.color = "#6c63ff"}

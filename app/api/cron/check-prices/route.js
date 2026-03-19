@@ -1,18 +1,21 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { scrapeProduct } from "@/lib/firecrawl";
-import { sendPriceDropAlert } from "@/lib/email";
+import { sendPriceDropAlert } from "@/lib/resend"; // ✅ FIXED
 
 export async function POST(request) {
   try {
     const authHeader = request.headers.get("authorization");
     const cronSecret = process.env.CRON_SECRET;
 
-      if (!cronSecret || authHeader !== `Bearer ${cronSecret}`) {
+    if (!cronSecret || authHeader !== `Bearer ${cronSecret}`) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // Use service role to bypass RLS
+    // ✅ Log env vars to debug
+    console.log("SUPABASE_URL:", process.env.NEXT_PUBLIC_SUPABASE_URL ? "✅" : "❌ MISSING");
+    console.log("SERVICE_ROLE:", process.env.SUPABASE_SERVICE_ROLE_KEY ? "✅" : "❌ MISSING");
+
     const supabase = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL,
       process.env.SUPABASE_SERVICE_ROLE_KEY
@@ -22,12 +25,15 @@ export async function POST(request) {
       .from("products")
       .select("*");
 
-    if (productsError) throw productsError;
+    if (productsError) {
+      console.error("Products fetch error:", productsError);
+      throw productsError;
+    }
 
-    console.log(`Found ${products.length} products to check`);
+    console.log(`Found ${products?.length} products`);
 
     const results = {
-      total: products.length,
+      total: products?.length || 0,
       updated: 0,
       failed: 0,
       priceChanges: 0,
@@ -57,38 +63,45 @@ export async function POST(request) {
           })
           .eq("id", product.id);
 
+        // Always insert price history
+        await supabase.from("price_history").insert({
+          product_id: product.id,
+          price: newPrice,
+          currency: productData.currencyCode || product.currency,
+          checked_at: new Date().toISOString(),
+        });
+
         if (oldPrice !== newPrice) {
-          await supabase.from("price_history").insert({
-            product_id: product.id,
-            price: newPrice,
-            currency: productData.currencyCode || product.currency,
-          });
-
           results.priceChanges++;
+        }
 
-          if (newPrice < oldPrice) {
-            const {
-              data: { user },
-            } = await supabase.auth.admin.getUserById(product.user_id);
+        // ✅ Send alert only when target price is reached
+        const targetPrice = parseFloat(product.target_price);
+        if (
+          product.target_price &&
+          newPrice <= targetPrice &&
+          oldPrice > targetPrice
+        ) {
+          const { data: { user } } = await supabase.auth.admin.getUserById(
+            product.user_id
+          );
 
-            if (user?.email) {
-              const emailResult = await sendPriceDropAlert(
-                user.email,
-                product,
-                oldPrice,
-                newPrice
-              );
-
-              if (emailResult.success) {
-                results.alertsSent++;
-              }
+          if (user?.email) {
+            const emailResult = await sendPriceDropAlert(
+              user.email,
+              product,
+              oldPrice,
+              newPrice
+            );
+            if (emailResult.success) {
+              results.alertsSent++;
             }
           }
         }
 
         results.updated++;
       } catch (error) {
-        console.error(`Error processing product ${product.id}:`, error);
+        console.error(`Error processing ${product.id}:`, error);
         results.failed++;
       }
     }

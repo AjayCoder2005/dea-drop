@@ -33,10 +33,10 @@ export async function GET() {
       }
     }
 
-    return NextResponse.json({ 
-      success: true, 
+    return NextResponse.json({
+      success: true,
       checked: products?.length,
-      alerts 
+      alerts,
     });
 
   } catch (error) {

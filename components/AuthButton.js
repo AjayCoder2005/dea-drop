@@ -2,12 +2,12 @@
 
 import { useState } from "react";
 import { signOut } from "@/app/actions";
-import AuthModal from "./AuthModal";
 import { LogIn, LogOut } from "lucide-react";
+import AuthModal from "./AuthModal";
 
 export default function AuthButton({ user }) {
-  const [showAuthModal, setShowAuthModal] = useState(false);
-  const [loading, setLoading] = useState(false);
+  const [showModal, setShowModal] = useState(false);
+  const [loading, setLoading]     = useState(false);
 
   const handleSignOut = async () => {
     setLoading(true);
@@ -29,8 +29,16 @@ export default function AuthButton({ user }) {
           fontFamily: "'Sora', sans-serif",
           transition: "all .2s",
         }}
-        onMouseEnter={e => { e.currentTarget.style.borderColor = "#2a2a3a"; e.currentTarget.style.color = "#f0f0f5"; }}
-        onMouseLeave={e => { e.currentTarget.style.borderColor = "#222230"; e.currentTarget.style.color = "#888899"; }}
+        onMouseEnter={e => {
+          if (!loading) {
+            e.currentTarget.style.borderColor = "#2a2a3a";
+            e.currentTarget.style.color = "#f0f0f5";
+          }
+        }}
+        onMouseLeave={e => {
+          e.currentTarget.style.borderColor = "#222230";
+          e.currentTarget.style.color = "#888899";
+        }}
       >
         <LogOut style={{ width: 14, height: 14 }} />
         {loading ? "Signing out..." : "Sign out"}
@@ -41,13 +49,14 @@ export default function AuthButton({ user }) {
   return (
     <>
       <button
-        onClick={() => setShowAuthModal(true)}
+        onClick={() => setShowModal(true)}
         style={{
           display: "flex", alignItems: "center", gap: 8,
           background: "#6c63ff", color: "#fff",
-          border: "none", padding: "8px 18px", borderRadius: 8,
+          border: "none", padding: "8px 20px", borderRadius: 8,
           fontSize: 13, fontWeight: 500,
-          cursor: "pointer", fontFamily: "'Sora', sans-serif",
+          cursor: "pointer",
+          fontFamily: "'Sora', sans-serif",
           transition: "opacity .2s",
         }}
         onMouseEnter={e => e.currentTarget.style.opacity = "0.85"}
@@ -57,9 +66,10 @@ export default function AuthButton({ user }) {
         Sign in
       </button>
 
+      {/* Modal rendered at this level — always in DOM when showModal=true */}
       <AuthModal
-        isOpen={showAuthModal}
-        onClose={() => setShowAuthModal(false)}
+        isOpen={showModal}
+        onClose={() => setShowModal(false)}
       />
     </>
   );

@@ -1,10 +1,13 @@
+// app/api/cron/route.js
+
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { scrapeProduct } from "@/lib/firecrawl";
-import { sendPriceDropAlert } from "@/lib/resend"; // ✅ FIXED
+import { sendPriceDropAlert } from "@/lib/resend";
 
 export async function POST(request) {
   try {
+    // 🔐 Auth check
     const authHeader = request.headers.get("authorization");
     const cronSecret = process.env.CRON_SECRET;
 
@@ -12,140 +15,135 @@ export async function POST(request) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    // 🗄️ Supabase client
     const supabase = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL,
       process.env.SUPABASE_SERVICE_ROLE_KEY
     );
 
-    const { data: products, error: productsError } = await supabase
+    // 📦 Get products
+    const { data: products, error } = await supabase
       .from("products")
       .select("*");
 
-    if (productsError) {
-      console.error("Products fetch error:", productsError);
-      throw productsError;
-    }
-
-    console.log(`🔍 Checking prices for ${products?.length || 0} products`);
+    if (error) throw error;
 
     const results = {
-      total:        products?.length || 0,
-      updated:      0,
-      skipped:      0,
-      failed:       0,
+      total: products?.length || 0,
+      updated: 0,
+      failed: 0,
       priceChanges: 0,
-      alertsSent:   0,
+      alertsSent: 0,
     };
 
     for (const product of products || []) {
       try {
-        const scraped = await scrapeProduct(product.url);
+        const data = await scrapeProduct(product.url);
 
-        if (!scraped.current_price) {
-          console.warn(`⚠️ No price found for ${product.url}`);
+        if (!data.current_price) {
           results.failed++;
           continue;
         }
 
-        const newPrice = parseFloat(scraped.current_price);
+        const newPrice = parseFloat(data.current_price);
         const oldPrice = parseFloat(product.current_price);
-        const currency = scraped.currency || product.currency;
 
-        // Update product
+        if (isNaN(newPrice)) {
+          results.failed++;
+          continue;
+        }
+
+        const currency = data.currency || product.currency;
+
+        // ✅ Update product
         await supabase
           .from("products")
           .update({
             current_price: newPrice,
             currency,
-            name:       scraped.name      || product.name,
-            image_url:  scraped.image_url || product.image_url,
+            name: data.name || product.name,
+            image_url: data.image_url || product.image_url,
             updated_at: new Date().toISOString(),
           })
           .eq("id", product.id);
 
-        // Always insert price history
+        // ✅ Insert history
         await supabase.from("price_history").insert({
           product_id: product.id,
-          price:      newPrice,
+          price: newPrice,
           currency,
           checked_at: new Date().toISOString(),
         });
 
         if (newPrice !== oldPrice) {
           results.priceChanges++;
-          console.log(`💱 Price changed: ${oldPrice} → ${newPrice}`);
-        } else {
-          results.skipped++;
         }
 
         const userEmail = product.user_email;
+        const targetPrice = parseFloat(product.target_price);
 
-        if (!userEmail) {
-          console.warn(`⚠️ No user_email on product ${product.id}`);
-          results.updated++;
-          continue;
-        }
-
-        // ✅ Price drop alert - any price drop
-        if (newPrice < oldPrice) {
+        // 🔥 Price drop alert
+        if (userEmail && newPrice < oldPrice) {
           try {
-            await sendPriceDropAlert(
-              userEmail,    // ✅ correct signature
-              product,
+            const res = await sendPriceDropAlert({
+              to: userEmail,
+              productName: product.name,
+              productUrl: product.url,
               oldPrice,
-              newPrice
-            );
-            results.alertsSent++;
-            console.log(`📧 Price drop alert sent to ${userEmail}`);
+              newPrice,
+              currency,
+              targetPrice,
+            });
+
+            if (res?.id) results.alertsSent++;
           } catch (e) {
-            console.error(`❌ Email failed:`, e.message);
+            console.error("Email error:", e.message);
           }
         }
 
-        // ✅ Target price alert
+        // 🎯 Target alert
         if (
+          userEmail &&
           product.target_price &&
-          newPrice <= parseFloat(product.target_price) &&
-          oldPrice > parseFloat(product.target_price)
+          newPrice <= targetPrice &&
+          oldPrice > targetPrice
         ) {
           try {
-            await sendPriceDropAlert(
-              userEmail,    // ✅ correct signature
-              product,
+            const res = await sendPriceDropAlert({
+              to: userEmail,
+              productName: product.name,
+              productUrl: product.url,
               oldPrice,
-              newPrice
-            );
-            results.alertsSent++;
-            console.log(`🎯 Target alert sent to ${userEmail}`);
+              newPrice,
+              currency,
+              targetPrice,
+            });
+
+            if (res?.id) results.alertsSent++;
           } catch (e) {
-            console.error(`❌ Target email failed:`, e.message);
+            console.error("Target email error:", e.message);
           }
         }
 
         results.updated++;
-      } catch (error) {
-        console.error(`❌ Error processing ${product.id}:`, error.message);
+      } catch (err) {
+        console.error(`❌ Product ${product.id}:`, err.message);
         results.failed++;
       }
     }
 
-    console.log("✅ Cron complete:", results);
-
     return NextResponse.json({
       success: true,
-      message: "Price check completed",
-      timestamp: new Date().toISOString(),
       results,
     });
-  } catch (error) {
-    console.error("❌ Cron job error:", error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+  } catch (err) {
+    console.error("❌ Cron error:", err.message);
+    return NextResponse.json({ error: err.message }, { status: 500 });
   }
 }
 
 export async function GET() {
   return NextResponse.json({
-    status: "ok",
-    message: "Price check endpoint is live. Use POST to trigger.",
+    message: "Cron endpoint ready. Use POST.",
   });
 }

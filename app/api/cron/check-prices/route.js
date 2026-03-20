@@ -1,11 +1,10 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { scrapeProduct } from "@/lib/firecrawl";
-import { sendPriceDropAlert } from "@/lib/resend"; // single import — covers both drop + target
+import { sendPriceDropAlert } from "@/lib/resend"; // ✅ FIXED
 
 export async function POST(request) {
   try {
-    // ── Auth check ────────────────────────────────────────────────────────
     const authHeader = request.headers.get("authorization");
     const cronSecret = process.env.CRON_SECRET;
 
@@ -13,13 +12,11 @@ export async function POST(request) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // ── Service role client (bypasses RLS) ────────────────────────────────
     const supabase = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL,
       process.env.SUPABASE_SERVICE_ROLE_KEY
     );
 
-    // ── Fetch all tracked products ────────────────────────────────────────
     const { data: products, error: productsError } = await supabase
       .from("products")
       .select("*");
@@ -42,11 +39,10 @@ export async function POST(request) {
 
     for (const product of products || []) {
       try {
-        // ── Scrape latest price ─────────────────────────────────────────
         const scraped = await scrapeProduct(product.url);
 
         if (!scraped.current_price) {
-          console.warn(`⚠️  No price found for ${product.url}`);
+          console.warn(`⚠️ No price found for ${product.url}`);
           results.failed++;
           continue;
         }
@@ -55,19 +51,19 @@ export async function POST(request) {
         const oldPrice = parseFloat(product.current_price);
         const currency = scraped.currency || product.currency;
 
-        // ── Update product row ──────────────────────────────────────────
+        // Update product
         await supabase
           .from("products")
           .update({
             current_price: newPrice,
             currency,
-            name:          scraped.name      || product.name,
-            image_url:     scraped.image_url || product.image_url,
-            updated_at:    new Date().toISOString(),
+            name:       scraped.name      || product.name,
+            image_url:  scraped.image_url || product.image_url,
+            updated_at: new Date().toISOString(),
           })
           .eq("id", product.id);
 
-        // ── Always record price history ─────────────────────────────────
+        // Always insert price history
         await supabase.from("price_history").insert({
           product_id: product.id,
           price:      newPrice,
@@ -77,64 +73,58 @@ export async function POST(request) {
 
         if (newPrice !== oldPrice) {
           results.priceChanges++;
-          console.log(`💱 Price changed for "${product.name}": ${oldPrice} → ${newPrice}`);
+          console.log(`💱 Price changed: ${oldPrice} → ${newPrice}`);
         } else {
           results.skipped++;
         }
 
-        // ── Get user email ──────────────────────────────────────────────
         const userEmail = product.user_email;
 
         if (!userEmail) {
-          console.warn(`⚠️  No user_email on product ${product.id} — skipping alerts`);
+          console.warn(`⚠️ No user_email on product ${product.id}`);
           results.updated++;
           continue;
         }
 
-        // ── Price drop alert ────────────────────────────────────────────
+        // ✅ Price drop alert - any price drop
         if (newPrice < oldPrice) {
           try {
-            await sendPriceDropAlert({
-              to:          userEmail,
-              productName: product.name,
-              productUrl:  product.url,
+            await sendPriceDropAlert(
+              userEmail,    // ✅ correct signature
+              product,
               oldPrice,
-              newPrice,
-              currency,
-            });
+              newPrice
+            );
             results.alertsSent++;
             console.log(`📧 Price drop alert sent to ${userEmail}`);
           } catch (e) {
-            console.error(`❌ Price drop email failed for ${product.id}:`, e.message);
+            console.error(`❌ Email failed:`, e.message);
           }
         }
 
-        // ── Target price alert ──────────────────────────────────────────
+        // ✅ Target price alert
         if (
           product.target_price &&
           newPrice <= parseFloat(product.target_price) &&
           oldPrice > parseFloat(product.target_price)
         ) {
           try {
-            await sendPriceDropAlert({
-              to:          userEmail,
-              productName: product.name,
-              productUrl:  product.url,
+            await sendPriceDropAlert(
+              userEmail,    // ✅ correct signature
+              product,
               oldPrice,
-              newPrice,
-              currency,
-              targetPrice: product.target_price,
-            });
+              newPrice
+            );
             results.alertsSent++;
-            console.log(`🎯 Target price alert sent to ${userEmail}`);
+            console.log(`🎯 Target alert sent to ${userEmail}`);
           } catch (e) {
-            console.error(`❌ Target price email failed for ${product.id}:`, e.message);
+            console.error(`❌ Target email failed:`, e.message);
           }
         }
 
         results.updated++;
       } catch (error) {
-        console.error(`❌ Error processing product ${product.id}:`, error.message);
+        console.error(`❌ Error processing ${product.id}:`, error.message);
         results.failed++;
       }
     }
@@ -142,8 +132,8 @@ export async function POST(request) {
     console.log("✅ Cron complete:", results);
 
     return NextResponse.json({
-      success:   true,
-      message:   "Price check completed",
+      success: true,
+      message: "Price check completed",
       timestamp: new Date().toISOString(),
       results,
     });
@@ -155,8 +145,7 @@ export async function POST(request) {
 
 export async function GET() {
   return NextResponse.json({
-    status:  "ok",
-    message: "Price check endpoint is live. Use POST with Authorization header to trigger.",
-    usage:   "POST /api/cron/check-prices with Authorization: Bearer <CRON_SECRET>",
+    status: "ok",
+    message: "Price check endpoint is live. Use POST to trigger.",
   });
 }

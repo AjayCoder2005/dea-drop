@@ -1,8 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { scrapeProduct } from "@/lib/firecrawl";
-import { sendPriceDropAlert, sendTargetPriceAlert } from "@/lib/email";
-import { sendPriceDropAlert } from "@/lib/resend"; // ✅ FIXED
+import { sendPriceDropAlert } from "@/lib/resend"; // single import — covers both drop + target
 
 export async function POST(request) {
   try {
@@ -46,7 +45,6 @@ export async function POST(request) {
         // ── Scrape latest price ─────────────────────────────────────────
         const scraped = await scrapeProduct(product.url);
 
-        // scrapeProduct returns: { name, current_price, currency, image_url }
         if (!scraped.current_price) {
           console.warn(`⚠️  No price found for ${product.url}`);
           results.failed++;
@@ -85,7 +83,6 @@ export async function POST(request) {
         }
 
         // ── Get user email ──────────────────────────────────────────────
-        // We store user_email on the product row to avoid auth.admin calls
         const userEmail = product.user_email;
 
         if (!userEmail) {
@@ -98,10 +95,12 @@ export async function POST(request) {
         if (newPrice < oldPrice) {
           try {
             await sendPriceDropAlert({
-              to:       userEmail,
-              product:  { ...product, url: product.url },
+              to:          userEmail,
+              productName: product.name,
+              productUrl:  product.url,
               oldPrice,
               newPrice,
+              currency,
             });
             results.alertsSent++;
             console.log(`📧 Price drop alert sent to ${userEmail}`);
@@ -117,9 +116,13 @@ export async function POST(request) {
           oldPrice > parseFloat(product.target_price)
         ) {
           try {
-            await sendTargetPriceAlert({
+            await sendPriceDropAlert({
               to:          userEmail,
-              product:     { ...product, current_price: newPrice },
+              productName: product.name,
+              productUrl:  product.url,
+              oldPrice,
+              newPrice,
+              currency,
               targetPrice: product.target_price,
             });
             results.alertsSent++;
@@ -139,8 +142,8 @@ export async function POST(request) {
     console.log("✅ Cron complete:", results);
 
     return NextResponse.json({
-      success: true,
-      message: "Price check completed",
+      success:   true,
+      message:   "Price check completed",
       timestamp: new Date().toISOString(),
       results,
     });
@@ -152,8 +155,8 @@ export async function POST(request) {
 
 export async function GET() {
   return NextResponse.json({
-    status: "ok",
+    status:  "ok",
     message: "Price check endpoint is live. Use POST with Authorization header to trigger.",
-    usage: "POST /api/cron/check-prices with Authorization: Bearer <CRON_SECRET>",
+    usage:   "POST /api/cron/check-prices with Authorization: Bearer <CRON_SECRET>",
   });
 }

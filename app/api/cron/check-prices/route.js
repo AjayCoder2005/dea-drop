@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
-import scrapeProduct from "@/lib/firecrawl"; // ✅ FIXED (default import)
+import { scrapeProduct } from "@/lib/firecrawl";
 import { sendPriceDropAlert, sendTargetPriceAlert } from "@/lib/email";
 
 export async function POST(request) {

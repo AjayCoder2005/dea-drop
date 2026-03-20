@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
-import { scrapeProduct } from "@/lib/firecrawl";
+import scrapeProduct from "@/lib/firecrawl"; // ✅ FIXED (default import)
 import { sendPriceDropAlert, sendTargetPriceAlert } from "@/lib/email";
 
 export async function POST(request) {
@@ -42,7 +42,6 @@ export async function POST(request) {
 
     for (const product of products || []) {
       try {
-        // ── Scrape latest price ─────────────────────────────────────────
         const productData = await scrapeProduct(product.url);
 
         if (!productData?.current_price) {
@@ -53,7 +52,6 @@ export async function POST(request) {
         const newPrice = parseFloat(productData.current_price);
         const oldPrice = parseFloat(product.current_price);
 
-        // ── Update product ──────────────────────────────────────────────
         await supabase
           .from("products")
           .update({
@@ -65,11 +63,10 @@ export async function POST(request) {
           })
           .eq("id", product.id);
 
-        // ── Insert price history ────────────────────────────────────────
         await supabase.from("price_history").insert({
           product_id: product.id,
           price: newPrice,
-          currency: productData.currency || product.currency, // ✅ FIXED
+          currency: productData.currency || product.currency,
           checked_at: new Date().toISOString(),
         });
 

@@ -40,31 +40,27 @@ export async function POST(request) {
       alertsSent:   0,
     };
 
-    for (const product of products || []) {
+    for (const product of products) {
       try {
-        // ── Scrape latest price ─────────────────────────────────────────
-        const scraped = await scrapeProduct(product.url);
-
-        // scrapeProduct returns: { name, current_price, currency, image_url }
-        if (!scraped.current_price) {
-          console.warn(`⚠️  No price found for ${product.url}`);
+        const productData = await scrapeProduct(product.url);
+    
+        // ✅ FIXED - use correct field names from firecrawl.js
+        if (!productData.current_price) {
           results.failed++;
           continue;
         }
-
-        const newPrice = parseFloat(scraped.current_price);
+    
+        const newPrice = parseFloat(productData.current_price);  // ✅ was currentPrice
         const oldPrice = parseFloat(product.current_price);
-        const currency = scraped.currency || product.currency;
-
-        // ── Update product row ──────────────────────────────────────────
+    
         await supabase
           .from("products")
           .update({
             current_price: newPrice,
-            currency,
-            name:          scraped.name      || product.name,
-            image_url:     scraped.image_url || product.image_url,
-            updated_at:    new Date().toISOString(),
+            currency: productData.currency || product.currency,        // ✅ was currencyCode
+            name: productData.name || product.name,                    // ✅ was productName
+            image_url: productData.image_url || product.image_url,     // ✅ was productImageUrl
+            updated_at: new Date().toISOString(),
           })
           .eq("id", product.id);
 

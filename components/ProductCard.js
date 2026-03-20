@@ -8,7 +8,7 @@ import {
   Trash2, BarChart2, Bell, BellOff, Check,
   TrendingDown, TrendingUp, Eye,
   CircleDot,   // Tracking status pill
-  Crosshair,   // Target Reached badge
+  Target,      // Target Reached badge (replaces Crosshair — not in lucide)
   BellRing,    // Alert price badge
 } from "lucide-react";
 import { deleteProduct, setTargetPrice } from "@/app/actions";
@@ -52,48 +52,65 @@ const STYLES = `
     0%   { background-position: -400px 0; }
     100% { background-position:  400px 0; }
   }
-  .pc-price-drop { animation: priceDrop    0.8s ease-out forwards; display: inline-block; }
-  .pc-price-rise { animation: priceRise    0.7s ease-out forwards; display: inline-block; }
-  .pc-badge-in   { animation: badgeIn      0.4s cubic-bezier(0.34,1.56,0.64,1) forwards; }
-  .pc-pulse-glow { animation: pulseGlow    1.8s ease-in-out 3; }
-  .pc-live-blip  { animation: liveBlip     1.4s ease-in-out infinite; }
-  .pc-slide-up   { animation: slideUpSmall 0.3s ease-out forwards; }
-  .pc-chart-open { animation: chartReveal  0.3s ease-out forwards; }
-  .pc-img-shimmer {
-    background: linear-gradient(90deg, #18181f 25%, #222230 50%, #18181f 75%);
-    background-size: 800px 100%;
-    animation: imgShimmer 1.4s ease-in-out infinite;
-  }
-
   @keyframes imgFadeIn {
-    from { opacity: 0; transform: scale(1.05); }
+    from { opacity: 0; transform: scale(1.04); }
     to   { opacity: 1; transform: scale(1); }
   }
   @keyframes scanLine {
     0%   { transform: translateY(-100%); opacity: 0; }
-    8%   { opacity: 0.5; }
-    92%  { opacity: 0.5; }
+    8%   { opacity: 0.4; }
+    92%  { opacity: 0.4; }
     100% { transform: translateY(800%); opacity: 0; }
-  }
-  @keyframes cornerGlow {
-    0%,100% { opacity: 0.25; }
-    50%     { opacity: 1; }
   }
   @keyframes borderShimmer {
     0%,100% { opacity: 0.3; }
-    50%     { opacity: 0.8; }
+    50%     { opacity: 0.7; }
+  }
+  @keyframes cardEnter {
+    from { opacity: 0; transform: translateY(18px) scale(0.97); }
+    to   { opacity: 1; transform: translateY(0)    scale(1);    }
+  }
+  @keyframes trackPulse {
+    0%,100% { opacity: 0.55; }
+    50%     { opacity: 1; }
   }
 
-  .pc-img-loaded   { animation: imgFadeIn 0.55s cubic-bezier(0.25,0.46,0.45,0.94) forwards; }
-  .pc-img-inner    { transition: transform 0.55s cubic-bezier(0.25,0.46,0.45,0.94); }
-  .pc-img-wrap:hover .pc-img-inner { transform: scale(1.045); }
-  .pc-scan-line    { animation: scanLine 4s ease-in-out infinite 2s; pointer-events: none; }
-  .pc-corner       { animation: cornerGlow 2.8s ease-in-out infinite; }
-  .pc-border-pulse { animation: borderShimmer 3s ease-in-out infinite; }
+  .pc-price-drop  { animation: priceDrop    0.8s ease-out forwards; display: inline-block; }
+  .pc-price-rise  { animation: priceRise    0.7s ease-out forwards; display: inline-block; }
+  .pc-badge-in    { animation: badgeIn      0.4s cubic-bezier(0.34,1.56,0.64,1) forwards; }
+  .pc-pulse-glow  { animation: pulseGlow    1.8s ease-in-out 3; }
+  .pc-live-blip   { animation: liveBlip     1.4s ease-in-out infinite; }
+  .pc-slide-up    { animation: slideUpSmall 0.3s ease-out forwards; }
+  .pc-chart-open  { animation: chartReveal  0.3s ease-out forwards; }
+  .pc-img-loaded  { animation: imgFadeIn    0.5s cubic-bezier(0.25,0.46,0.45,0.94) forwards; }
+  .pc-scan-line   { animation: scanLine     4s ease-in-out infinite 2s; pointer-events: none; }
+  .pc-border-pulse{ animation: borderShimmer 3s ease-in-out infinite; }
+  .pc-tracking    { animation: trackPulse   2s ease-in-out infinite; }
 
-  /* ── Badge & button hovers ── */
+  .pc-img-shimmer {
+    background: linear-gradient(90deg, #13131a 25%, #1e1e2a 50%, #13131a 75%);
+    background-size: 800px 100%;
+    animation: imgShimmer 1.4s ease-in-out infinite;
+  }
+
+  /* Card */
+  .pc-card {
+    transition: transform 0.25s cubic-bezier(0.25,0.46,0.45,0.94),
+                box-shadow 0.25s cubic-bezier(0.25,0.46,0.45,0.94),
+                border-color 0.3s;
+  }
+  .pc-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 14px 36px rgba(0,0,0,0.4), 0 0 0 1px rgba(108,99,255,0.12);
+  }
+  .pc-card-enter { animation: cardEnter 0.45s cubic-bezier(0.34,1.2,0.64,1) both; }
+
+  /* Image wrap hover zoom */
+  .pc-img-inner { transition: transform 0.5s cubic-bezier(0.25,0.46,0.45,0.94); }
+  .pc-img-wrap:hover .pc-img-inner { transform: scale(1.04); }
+
+  /* Badge hovers */
   .pc-live-badge {
-    cursor: default;
     transition: background .2s, border-color .2s, transform .2s, box-shadow .2s;
   }
   .pc-live-badge:hover {
@@ -103,15 +120,16 @@ const STYLES = `
     box-shadow: 0 0 10px rgba(34,197,94,0.25);
   }
   .pc-target-badge {
-    cursor: default;
     transition: background .2s, border-color .2s, transform .2s, box-shadow .2s;
   }
   .pc-target-badge:hover {
-    background: rgba(34,197,94,0.28) !important;
-    border-color: rgba(34,197,94,0.7) !important;
-    transform: scale(1.06);
+    background: rgba(34,197,94,0.26) !important;
+    border-color: rgba(34,197,94,0.65) !important;
+    transform: scale(1.05);
     box-shadow: 0 0 14px rgba(34,197,94,0.3);
   }
+
+  /* Delete button */
   .pc-delete-btn {
     transition: background .18s, color .18s, border-color .18s, transform .18s, box-shadow .18s;
   }
@@ -119,50 +137,28 @@ const STYLES = `
     background: rgba(244,63,94,0.75) !important;
     border-color: rgba(244,63,94,0.5) !important;
     color: #fff !important;
-    transform: scale(1.12);
-    box-shadow: 0 0 12px rgba(244,63,94,0.4);
+    transform: scale(1.1) !important;
+    box-shadow: 0 0 12px rgba(244,63,94,0.35);
   }
-  .pc-delete-btn:active {
-    transform: scale(0.96);
-  }
+  .pc-delete-btn:active { transform: scale(0.96) !important; }
 
-  /* ── Card entrance ── */
-  @keyframes cardEnter {
-    from { opacity: 0; transform: translateY(18px) scale(0.97); }
-    to   { opacity: 1; transform: translateY(0)    scale(1);    }
-  }
-  .pc-card-enter { animation: cardEnter 0.45s cubic-bezier(0.34,1.2,0.64,1) both; }
-
-  /* ── Card hover lift ── */
-  .pc-card {
-    transition: transform 0.25s cubic-bezier(0.25,0.46,0.45,0.94),
-                box-shadow 0.25s cubic-bezier(0.25,0.46,0.45,0.94),
-                border-color 0.3s;
-  }
-  .pc-card:hover {
-    transform: translateY(-4px);
-    box-shadow: 0 16px 40px rgba(0,0,0,0.45), 0 0 0 1px rgba(108,99,255,0.15);
-  }
-
-  /* ── Action button press ── */
-  .pc-action-btn {
-    transition: all 0.2s cubic-bezier(0.25,0.46,0.45,0.94) !important;
-  }
-  .pc-action-btn:hover  { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(108,99,255,0.2); }
+  /* Action buttons */
+  .pc-action-btn { transition: all 0.2s cubic-bezier(0.25,0.46,0.45,0.94) !important; }
+  .pc-action-btn:hover  { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(108,99,255,0.18); }
   .pc-action-btn:active { transform: scale(0.97); }
 
-  /* ── Alert badge ── */
+  /* Alert badge */
   .pc-alert-badge { transition: transform 0.2s, box-shadow 0.2s; }
-  .pc-alert-badge:hover { transform: scale(1.02); box-shadow: 0 0 12px rgba(167,139,250,0.2); }
+  .pc-alert-badge:hover { transform: scale(1.015); box-shadow: 0 0 12px rgba(167,139,250,0.18); }
 
-  /* ── Chart toggle ── */
+  /* Chart toggle */
   .pc-chart-toggle { transition: color 0.2s, transform 0.15s !important; }
   .pc-chart-toggle:hover  { transform: scale(1.03); }
   .pc-chart-toggle:active { transform: scale(0.97); }
 
-  /* ── Price number ── */
+  /* Price number hover */
   .pc-price-num { transition: color 0.3s, transform 0.2s; display: inline-block; }
-  .pc-price-num:hover { transform: scale(1.06); }
+  .pc-price-num:hover { transform: scale(1.05); }
 `;
 
 function injectStyles() {
@@ -174,7 +170,6 @@ function injectStyles() {
   document.head.appendChild(tag);
 }
 
-// ── animated price counter ────────────────────────────────────────────────────
 function useCountUp(value, duration = 700) {
   const [display, setDisplay] = useState(value);
   const prev = useRef(value);
@@ -194,18 +189,15 @@ function useCountUp(value, duration = 700) {
   return display;
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
 const ProductCard = ({ product: initialProduct }) => {
   const router   = useRouter();
   const supabase = createClient();
-
   useEffect(() => { injectStyles(); }, []);
 
   const [product, setProduct]                 = useState(initialProduct);
   const [priceFlash, setPriceFlash]           = useState(null);
   const [dropPct, setDropPct]                 = useState(null);
   const prevPrice                              = useRef(initialProduct.current_price);
-
   const [deleting, setDeleting]               = useState(false);
   const [showConfirm, setShowConfirm]         = useState(false);
   const [showChart, setShowChart]             = useState(false);
@@ -228,12 +220,10 @@ const ProductCard = ({ product: initialProduct }) => {
     else setShowChart(false);
   };
 
-  // ── Supabase Realtime ─────────────────────────────────────────────────────
   useEffect(() => {
     const channel = supabase
       .channel(`product-${product.id}`)
-      .on(
-        "postgres_changes",
+      .on("postgres_changes",
         { event: "UPDATE", schema: "public", table: "products", filter: `id=eq.${product.id}` },
         (payload) => {
           const updated  = payload.new;
@@ -242,31 +232,20 @@ const ProductCard = ({ product: initialProduct }) => {
           setProduct(updated);
           if (newPrice !== oldPrice) {
             const pct = (((oldPrice - newPrice) / oldPrice) * 100).toFixed(1);
-            if (newPrice < oldPrice) {
-              setPriceFlash("drop"); setDropPct(pct);
-              toast.success(`🔥 Price dropped ${pct}% on ${updated.name}!`, { duration: 5000 });
-            } else {
-              setPriceFlash("rise"); setDropPct(null);
-            }
+            if (newPrice < oldPrice) { setPriceFlash("drop"); setDropPct(pct); toast.success(`🔥 Price dropped ${pct}% on ${updated.name}!`, { duration: 5000 }); }
+            else                     { setPriceFlash("rise"); setDropPct(null); }
             setTimeout(() => setPriceFlash(null), 2500);
             prevPrice.current = newPrice;
           }
         }
-      )
-      .subscribe();
+      ).subscribe();
     return () => supabase.removeChannel(channel);
   }, [product.id]);
 
   const handleDelete = async (e) => {
     e.stopPropagation();
-    try {
-      setDeleting(true); setShowConfirm(false);
-      await deleteProduct(product.id);
-      toast.success("Product removed");
-      router.refresh();
-    } catch {
-      toast.error("Delete failed"); setDeleting(false);
-    }
+    try { setDeleting(true); setShowConfirm(false); await deleteProduct(product.id); toast.success("Product removed"); router.refresh(); }
+    catch { toast.error("Delete failed"); setDeleting(false); }
   };
 
   const handleSetTarget = async (e) => {
@@ -274,25 +253,19 @@ const ProductCard = ({ product: initialProduct }) => {
     try {
       setSaving(true);
       await setTargetPrice(product.id, parseFloat(targetInput));
-      setSaved(true);
-      toast.success("Alert set 🔔");
+      setSaved(true); toast.success("Alert set 🔔");
       setTimeout(() => { setSaved(false); setShowTargetInput(false); router.refresh(); }, 600);
-    } catch {
-      toast.error("Failed to set alert");
-    } finally { setSaving(false); }
+    } catch { toast.error("Failed to set alert"); }
+    finally { setSaving(false); }
   };
 
   const handleRemoveTarget = async (e) => {
     e.stopPropagation();
     await setTargetPrice(product.id, null);
-    setTargetInput("");
-    toast.success("Alert removed");
-    router.refresh();
+    setTargetInput(""); toast.success("Alert removed"); router.refresh();
   };
 
-  const priceColor =
-    priceFlash === "drop" ? "#22c55e" :
-    priceFlash === "rise" ? "#f43f5e" : "#a78bfa";
+  const priceColor = priceFlash === "drop" ? "#22c55e" : priceFlash === "rise" ? "#f43f5e" : "#a78bfa";
 
   return (
     <div
@@ -302,11 +275,11 @@ const ProductCard = ({ product: initialProduct }) => {
         border: `1px solid ${priceFlash === "drop" || isTargetMet ? "rgba(34,197,94,0.35)" : "#1e1e2a"}`,
         borderRadius: 18,
         display: "flex", flexDirection: "column",
-        transition: "border-color 0.3s, box-shadow 0.3s",
         opacity: deleting ? 0.4 : 1,
+        overflow: "hidden",
       }}
     >
-      {/* ── IMAGE ──────────────────────────────────────────────────────────── */}
+      {/* ── IMAGE ── */}
       <div
         className="pc-img-wrap"
         style={{
@@ -317,62 +290,43 @@ const ProductCard = ({ product: initialProduct }) => {
           borderRadius: 14,
           overflow: "hidden",
           flexShrink: 0,
-          background: "#f8f8f8",
-          border: "1px solid rgba(255,255,255,0.07)",
-          boxShadow: "0 0 0 1px rgba(108,99,255,0.08), inset 0 1px 0 rgba(255,255,255,0.05)",
+          // ✅ FIXED: dark background — no more white box
+          background: "#0d0d12",
+          border: "1px solid rgba(255,255,255,0.06)",
         }}
       >
-        {/* Animated glowing border ring */}
-        <div className="pc-border-pulse" style={{
-          position: "absolute", inset: 0, zIndex: 6,
-          borderRadius: 14,
-          border: "1px solid rgba(108,99,255,0.3)",
-          pointerEvents: "none",
-        }} />
+        {/* Animated border ring */}
+        <div className="pc-border-pulse" style={{ position: "absolute", inset: 0, zIndex: 6, borderRadius: 14, border: "1px solid rgba(108,99,255,0.25)", pointerEvents: "none" }} />
 
-        {/* 4 corner accent dots — REMOVED */}
+        {/* Scan-line sweep */}
+        <div className="pc-scan-line" style={{ position: "absolute", left: 0, right: 0, top: 0, height: "20%", zIndex: 5, background: "linear-gradient(to bottom, transparent, rgba(108,99,255,0.05), transparent)", pointerEvents: "none" }} />
 
-        {/* Slow scan-line sweep */}
-        <div className="pc-scan-line" style={{
-          position: "absolute", left: 0, right: 0, top: 0,
-          height: "20%", zIndex: 5,
-          background: "linear-gradient(to bottom, transparent, rgba(108,99,255,0.055), transparent)",
-          pointerEvents: "none",
-        }} />
+        {/* Shimmer */}
+        {!imgLoaded && !imgError && <div className="pc-img-shimmer" style={{ position: "absolute", inset: 0, zIndex: 1 }} />}
 
-        {/* Shimmer while loading */}
-        {!imgLoaded && !imgError && (
-          <div className="pc-img-shimmer" style={{ position: "absolute", inset: 0, zIndex: 1 }} />
-        )}
-
-        {/* Emoji fallback */}
+        {/* Fallback emoji */}
         {(!product.image_url || imgError) && (
-          <div style={{
-            position: "absolute", inset: 0,
-            display: "flex", flexDirection: "column",
-            alignItems: "center", justifyContent: "center", gap: 8,
-          }}>
-            <span style={{ fontSize: 44, filter: "grayscale(0.2)" }}>🛍️</span>
+          <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 8 }}>
+            <span style={{ fontSize: 44 }}>🛍️</span>
             <span style={{ fontSize: 10, color: "#333340", letterSpacing: 1 }}>
               {(() => { try { return new URL(product.url).hostname.replace("www.", ""); } catch { return ""; } })()}
             </span>
           </div>
         )}
 
-        {/* Actual image with zoom-in wrapper */}
+        {/* Image — screen blend removes white backgrounds */}
         {product.image_url && !imgError && (
           <div className="pc-img-inner" style={{ position: "absolute", inset: 0 }}>
             <Image
-              src={product.image_url}
-              alt={product.name}
-              fill
+              src={product.image_url} alt={product.name} fill
               sizes="(max-width: 768px) 100vw, 400px"
               className={imgLoaded ? "pc-img-loaded" : ""}
               style={{
-                objectFit: "contain",
-                padding: "10px",
+                objectFit: "contain", padding: "10px",
                 opacity: imgLoaded ? 1 : 0,
-                mixBlendMode: "multiply",
+                // ✅ FIXED: "screen" removes white bg on dark cards
+                mixBlendMode: "screen",
+                filter: "brightness(0.92) contrast(1.05)",
               }}
               onLoad={() => setImgLoaded(true)}
               onError={() => setImgError(true)}
@@ -381,14 +335,25 @@ const ProductCard = ({ product: initialProduct }) => {
           </div>
         )}
 
-        {/* Bottom gradient */}
-        <div style={{
-          position: "absolute", bottom: 0, left: 0, right: 0, height: "45%",
-          background: "linear-gradient(to bottom, transparent, #0e0e14)",
-          zIndex: 2, pointerEvents: "none",
-        }} />
+        {/* Bottom fade */}
+        <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, height: "45%", background: "linear-gradient(to bottom, transparent, #0e0e14)", zIndex: 2, pointerEvents: "none" }} />
 
-        {/* LIVE badge */}
+        {/* ── TOP-LEFT: Target reached badge OR nothing ── */}
+        {isTargetMet && (
+          <div className="pc-badge-in pc-target-badge" style={{
+            position: "absolute", top: 10, left: 10, zIndex: 8,
+            display: "flex", alignItems: "center", gap: 5,
+            background: "rgba(34,197,94,0.15)", border: "1px solid rgba(34,197,94,0.4)",
+            color: "#22c55e", fontSize: 11, fontWeight: 700,
+            padding: "5px 11px", borderRadius: 20, backdropFilter: "blur(8px)",
+          }}>
+            {/* ✅ FIXED: Target icon (Crosshair doesn't exist in lucide) */}
+            <Target style={{ width: 12, height: 12 }} />
+            Target Reached!
+          </div>
+        )}
+
+        {/* ── TOP-RIGHT: LIVE badge ── */}
         <div className="pc-live-badge" style={{
           position: "absolute", top: 10, right: 10, zIndex: 8,
           display: "flex", alignItems: "center", gap: 5,
@@ -401,87 +366,50 @@ const ProductCard = ({ product: initialProduct }) => {
           LIVE
         </div>
 
-        {/* Target reached badge */}
-        {isTargetMet && (
-          <div className="pc-badge-in pc-target-badge" style={{
-            position: "absolute", top: 10, left: 10, zIndex: 8,
-            display: "flex", alignItems: "center", gap: 5,
-            background: "rgba(34,197,94,0.15)",
-            border: "1px solid rgba(34,197,94,0.4)",
-            color: "#22c55e", fontSize: 12, fontWeight: 700,
-            padding: "5px 11px", borderRadius: 20,
-            backdropFilter: "blur(8px)",
-          }}>
-            <Crosshair style={{ width: 13, height: 13 }} />
-            Target Reached!
-          </div>
-        )}
-
-        {/* Price drop flash badge */}
-        {priceFlash === "drop" && dropPct && (
-          <div className="pc-badge-in" style={{
-            position: "absolute", bottom: 14, left: 12, zIndex: 8,
-            display: "flex", alignItems: "center", gap: 4,
-            background: "rgba(34,197,94,0.9)",
-            color: "#fff", fontSize: 11, fontWeight: 700,
-            padding: "4px 10px", borderRadius: 20,
-          }}>
-            <TrendingDown style={{ width: 11, height: 11 }} />
-            -{dropPct}% drop
-          </div>
-        )}
-
-        {/* Price rise flash badge */}
-        {priceFlash === "rise" && (
-          <div className="pc-badge-in" style={{
-            position: "absolute", bottom: 14, left: 12, zIndex: 8,
-            display: "flex", alignItems: "center", gap: 4,
-            background: "rgba(244,63,94,0.9)",
-            color: "#fff", fontSize: 11, fontWeight: 700,
-            padding: "4px 10px", borderRadius: 20,
-          }}>
-            <TrendingUp style={{ width: 11, height: 11 }} />
-            Price up
-          </div>
-        )}
-
-        {/* Delete button */}
+        {/* ── DELETE button — top-right, BELOW LIVE (top: 38) ── */}
+        {/* ✅ FIXED: was same position as LIVE/Target — now offset below LIVE */}
         <button
           type="button"
           className="pc-delete-btn"
           onClick={(e) => { e.stopPropagation(); setShowConfirm(true); }}
           disabled={deleting}
           style={{
-            position: "absolute", top: 10,
-            left: isTargetMet ? "auto" : 10,
-            right: isTargetMet ? 10 : "auto",
+            position: "absolute",
+            top: 38,       // ← sits below LIVE badge
+            right: 10,
             zIndex: 9,
             background: "rgba(0,0,0,0.55)", backdropFilter: "blur(10px)",
-            color: "#555566", border: "1px solid rgba(255,255,255,0.1)",
-            width: 30, height: 30, borderRadius: "50%",
+            color: "#555566", border: "1px solid rgba(255,255,255,0.08)",
+            width: 28, height: 28, borderRadius: "50%",
             cursor: "pointer", display: "flex",
             alignItems: "center", justifyContent: "center",
           }}
         >
           <Trash2 style={{ width: 12, height: 12 }} />
         </button>
+
+        {/* Drop badge — bottom left */}
+        {priceFlash === "drop" && dropPct && (
+          <div className="pc-badge-in" style={{ position: "absolute", bottom: 14, left: 12, zIndex: 8, display: "flex", alignItems: "center", gap: 4, background: "rgba(34,197,94,0.9)", color: "#fff", fontSize: 11, fontWeight: 700, padding: "4px 10px", borderRadius: 20 }}>
+            <TrendingDown style={{ width: 11, height: 11 }} />-{dropPct}% drop
+          </div>
+        )}
+        {priceFlash === "rise" && (
+          <div className="pc-badge-in" style={{ position: "absolute", bottom: 14, left: 12, zIndex: 8, display: "flex", alignItems: "center", gap: 4, background: "rgba(244,63,94,0.9)", color: "#fff", fontSize: 11, fontWeight: 700, padding: "4px 10px", borderRadius: 20 }}>
+            <TrendingUp style={{ width: 11, height: 11 }} />Price up
+          </div>
+        )}
       </div>
 
-      {/* ── BODY ───────────────────────────────────────────────────────────── */}
+      {/* ── BODY ── */}
       <div style={{ padding: "14px 16px", display: "flex", flexDirection: "column", gap: 10, flex: 1 }}>
 
-        {/* Source */}
-        <div style={{ fontSize: 11, color: "#333340", textTransform: "uppercase", letterSpacing: "0.8px" }}>
+        <div style={{ fontSize: 10, color: "#333340", textTransform: "uppercase", letterSpacing: "0.8px" }}>
           {(() => { try { return new URL(product.url).hostname.replace("www.", ""); } catch { return ""; } })()}
         </div>
 
-        {/* Name */}
         <a href={product.url} target="_blank" rel="noreferrer" style={{ color: "#d0d0e0", textDecoration: "none" }}>
-          <p style={{
-            fontSize: 14, fontWeight: 500, lineHeight: 1.45, margin: 0,
-            display: "-webkit-box", WebkitLineClamp: 2,
-            WebkitBoxOrient: "vertical", overflow: "hidden",
-          }}>
+          <p style={{ fontSize: 14, fontWeight: 500, lineHeight: 1.45, margin: 0, display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>
             {product.name}
           </p>
         </a>
@@ -490,7 +418,7 @@ const ProductCard = ({ product: initialProduct }) => {
         <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
           <span
             className={`pc-price-num${priceFlash === "drop" ? " pc-price-drop" : priceFlash === "rise" ? " pc-price-rise" : ""}`}
-            style={{ fontSize: 24, fontWeight: 700, fontFamily: "'DM Mono', monospace", letterSpacing: -1, display: "inline-block", color: priceColor, transition: "color .3s" }}
+            style={{ fontSize: 24, fontWeight: 700, fontFamily: "'DM Mono', monospace", letterSpacing: -1, display: "inline-block", color: priceColor }}
           >
             {currency}{animatedPrice.toLocaleString("en-IN")}
           </span>
@@ -504,34 +432,29 @@ const ProductCard = ({ product: initialProduct }) => {
               <TrendingUp style={{ width: 11, height: 11 }} /> Rose
             </span>
           ) : (
-            <span style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 13, color: "#444455", letterSpacing: "0.3px" }}>
-              <CircleDot style={{ width: 13, height: 13 }} />
+            /* ✅ Animated tracking pill */
+            <span className="pc-tracking" style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 12, color: "#444455", background: "rgba(108,99,255,0.06)", border: "1px solid rgba(108,99,255,0.12)", padding: "3px 9px", borderRadius: 20 }}>
+              <CircleDot style={{ width: 11, height: 11, color: "#6c63ff" }} />
               Tracking
             </span>
           )}
         </div>
 
-        {/* Alert badge — BellRing icon */}
+        {/* Alert badge */}
         {product.target_price && (
           <div className="pc-alert-badge" style={{
             display: "flex", justifyContent: "space-between", alignItems: "center",
-            fontSize: 14, padding: "9px 12px", borderRadius: 10,
+            fontSize: 13, padding: "9px 12px", borderRadius: 10,
             border: `1px solid ${isTargetMet ? "rgba(34,197,94,0.25)" : "rgba(167,139,250,0.2)"}`,
             background: isTargetMet ? "rgba(34,197,94,0.06)" : "rgba(167,139,250,0.06)",
           }}>
             <span style={{ display: "flex", alignItems: "center", gap: 7, color: isTargetMet ? "#22c55e" : "#a78bfa" }}>
-              <BellRing style={{ width: 14, height: 14 }} />
+              <BellRing style={{ width: 13, height: 13 }} />
               Alert: {currency}{parseFloat(product.target_price).toLocaleString("en-IN")}
-              {isTargetMet && (
-                <span style={{ fontSize: 11, background: "rgba(34,197,94,0.15)", padding: "2px 7px", borderRadius: 10, color: "#22c55e", fontWeight: 600 }}>
-                  ✓ Met
-                </span>
-              )}
+              {isTargetMet && <span style={{ fontSize: 10, background: "rgba(34,197,94,0.15)", padding: "2px 7px", borderRadius: 10, color: "#22c55e", fontWeight: 600 }}>✓ Met</span>}
             </span>
-            <button
-              type="button"
-              onClick={handleRemoveTarget}
-              style={{ background: "none", border: "none", color: "#333340", cursor: "pointer", fontSize: 15, lineHeight: 1, padding: "0 2px", transition: "color .2s" }}
+            <button type="button" onClick={handleRemoveTarget}
+              style={{ background: "none", border: "none", color: "#333340", cursor: "pointer", fontSize: 14, lineHeight: 1, padding: "0 2px", transition: "color .2s" }}
               onMouseEnter={e => e.currentTarget.style.color = "#f43f5e"}
               onMouseLeave={e => e.currentTarget.style.color = "#333340"}
             >✕</button>
@@ -541,22 +464,14 @@ const ProductCard = ({ product: initialProduct }) => {
         {/* Target input */}
         {showTargetInput && (
           <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-            <input
-              type="number"
-              placeholder={`Target price (${currency})`}
-              value={targetInput}
-              onChange={(e) => setTargetInput(e.target.value)}
-              autoFocus
+            <input type="number" placeholder={`Target price (${currency})`} value={targetInput}
+              onChange={(e) => setTargetInput(e.target.value)} autoFocus
               style={{ flex: 1, background: "#13131a", border: "1px solid #1e1e2a", borderRadius: 8, padding: "7px 12px", color: "#f0f0f5", fontSize: 13, outline: "none", fontFamily: "'DM Mono', monospace", transition: "border-color .2s" }}
               onFocus={e => e.target.style.borderColor = "#6c63ff"}
               onBlur={e => e.target.style.borderColor = "#1e1e2a"}
             />
-            <button
-              type="button"
-              onClick={handleSetTarget}
-              disabled={saving || !targetInput}
-              style={{ background: saved ? "#22c55e" : saving ? "#1e1e2a" : "#6c63ff", color: "#fff", border: "none", borderRadius: 8, padding: "7px 16px", fontSize: 12, fontWeight: 600, cursor: saving ? "not-allowed" : "pointer", display: "flex", alignItems: "center", gap: 4, transition: "background .2s", flexShrink: 0 }}
-            >
+            <button type="button" onClick={handleSetTarget} disabled={saving || !targetInput}
+              style={{ background: saved ? "#22c55e" : saving ? "#1e1e2a" : "#6c63ff", color: "#fff", border: "none", borderRadius: 8, padding: "7px 16px", fontSize: 12, fontWeight: 600, cursor: saving ? "not-allowed" : "pointer", display: "flex", alignItems: "center", gap: 4, transition: "background .2s", flexShrink: 0 }}>
               {saved ? <Check style={{ width: 14, height: 14 }} /> : saving ? "…" : "Set"}
             </button>
           </div>
@@ -566,20 +481,15 @@ const ProductCard = ({ product: initialProduct }) => {
         {showConfirm && (
           <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 12px", borderRadius: 10, background: "rgba(244,63,94,0.07)", border: "1px solid rgba(244,63,94,0.2)" }}>
             <span style={{ fontSize: 12, color: "#f43f5e", flex: 1 }}>Remove this product?</span>
-            <button type="button" onClick={handleDelete}
-              style={{ background: "#f43f5e", color: "#fff", border: "none", borderRadius: 6, padding: "4px 14px", fontSize: 12, cursor: "pointer", fontWeight: 600 }}
-            >Yes</button>
-            <button type="button" onClick={(e) => { e.stopPropagation(); setShowConfirm(false); }}
-              style={{ background: "#18181f", color: "#888899", border: "1px solid #222230", borderRadius: 6, padding: "4px 12px", fontSize: 12, cursor: "pointer" }}
-            >No</button>
+            <button type="button" onClick={handleDelete} style={{ background: "#f43f5e", color: "#fff", border: "none", borderRadius: 6, padding: "4px 14px", fontSize: 12, cursor: "pointer", fontWeight: 600 }}>Yes</button>
+            <button type="button" onClick={(e) => { e.stopPropagation(); setShowConfirm(false); }} style={{ background: "#18181f", color: "#888899", border: "1px solid #222230", borderRadius: 6, padding: "4px 12px", fontSize: 12, cursor: "pointer" }}>No</button>
           </div>
         )}
 
         {/* Action buttons */}
         {!showConfirm && (
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginTop: "auto" }}>
-            <a
-              href={product.url} target="_blank" rel="noreferrer"
+            <a href={product.url} target="_blank" rel="noreferrer"
               className="pc-action-btn"
               style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6, background: "transparent", border: "1px solid #1e1e2a", color: "#555566", borderRadius: 10, padding: "8px 0", fontSize: 12, textDecoration: "none", fontFamily: "'Sora', sans-serif" }}
               onMouseEnter={e => { e.currentTarget.style.borderColor = "#6c63ff"; e.currentTarget.style.color = "#a78bfa"; e.currentTarget.style.background = "rgba(108,99,255,0.06)"; }}
@@ -587,27 +497,23 @@ const ProductCard = ({ product: initialProduct }) => {
             >
               <Eye style={{ width: 12, height: 12 }} /> View
             </a>
-            <button
-              type="button"
+            <button type="button"
               className="pc-action-btn"
               onClick={(e) => { e.stopPropagation(); setShowTargetInput(!showTargetInput); }}
-              style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6, background: showTargetInput ? "rgba(167,139,250,0.08)" : "transparent", border: `1px solid ${product.target_price ? "rgba(167,139,250,0.3)" : "#1e1e2a"}`, color: product.target_price ? "#a78bfa" : "#555566", borderRadius: 10, padding: "8px 0", fontSize: 12, cursor: "pointer", transition: "all .2s", fontFamily: "'Sora', sans-serif" }}
+              style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6, background: showTargetInput ? "rgba(167,139,250,0.08)" : "transparent", border: `1px solid ${product.target_price ? "rgba(167,139,250,0.3)" : "#1e1e2a"}`, color: product.target_price ? "#a78bfa" : "#555566", borderRadius: 10, padding: "8px 0", fontSize: 12, cursor: "pointer", fontFamily: "'Sora', sans-serif" }}
               onMouseEnter={e => { e.currentTarget.style.borderColor = "#a78bfa"; e.currentTarget.style.color = "#a78bfa"; e.currentTarget.style.background = "rgba(167,139,250,0.06)"; }}
               onMouseLeave={e => { e.currentTarget.style.borderColor = product.target_price ? "rgba(167,139,250,0.3)" : "#1e1e2a"; e.currentTarget.style.color = product.target_price ? "#a78bfa" : "#555566"; e.currentTarget.style.background = showTargetInput ? "rgba(167,139,250,0.08)" : "transparent"; }}
             >
-              {product.target_price
-                ? <><BellOff style={{ width: 12, height: 12 }} /> Alert</>
-                : <><Bell    style={{ width: 12, height: 12 }} /> Alert</>}
+              {product.target_price ? <><BellOff style={{ width: 12, height: 12 }} /> Alert</> : <><Bell style={{ width: 12, height: 12 }} /> Alert</>}
             </button>
           </div>
         )}
 
         {/* Chart toggle */}
-        <button
-          type="button"
+        <button type="button"
           className="pc-chart-toggle"
           onClick={handleToggleChart}
-          style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: 6, fontSize: 11, color: showChart ? "#6c63ff" : "#333340", background: "none", border: "none", borderTop: "1px solid #1a1a24", paddingTop: 10, cursor: "pointer", transition: "color .2s", fontFamily: "'Sora', sans-serif" }}
+          style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: 6, fontSize: 11, color: showChart ? "#6c63ff" : "#333340", background: "none", border: "none", borderTop: "1px solid #1a1a24", paddingTop: 10, cursor: "pointer", fontFamily: "'Sora', sans-serif" }}
           onMouseEnter={e => e.currentTarget.style.color = "#6c63ff"}
           onMouseLeave={e => e.currentTarget.style.color = showChart ? "#6c63ff" : "#333340"}
         >
@@ -616,7 +522,6 @@ const ProductCard = ({ product: initialProduct }) => {
         </button>
       </div>
 
-      {/* Chart */}
       {showChart && (
         <div className="pc-chart-open" style={{ padding: "0 16px 16px", borderTop: "1px solid #1a1a24" }}>
           <PriceChart key={chartKey} productId={product.id} currency={product.currency} />

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
-import scrapeProduct from "@/lib/firecrawl"; // ✅ FIXED (default import)
+import { scrapeProduct } from "@/lib/firecrawl";
 import { sendPriceDropAlert, sendTargetPriceAlert } from "@/lib/email";
 
 export async function POST(request) {
@@ -13,13 +13,13 @@ export async function POST(request) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // ── Service role client ───────────────────────────────────────────────
+    // ── Service role client (bypasses RLS) ────────────────────────────────
     const supabase = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL,
       process.env.SUPABASE_SERVICE_ROLE_KEY
     );
 
-    // ── Fetch products ────────────────────────────────────────────────────
+    // ── Fetch all tracked products ────────────────────────────────────────
     const { data: products, error: productsError } = await supabase
       .from("products")
       .select("*");
@@ -32,59 +32,63 @@ export async function POST(request) {
     console.log(`🔍 Checking prices for ${products?.length || 0} products`);
 
     const results = {
-      total: products?.length || 0,
-      updated: 0,
-      skipped: 0,
-      failed: 0,
+      total:        products?.length || 0,
+      updated:      0,
+      skipped:      0,
+      failed:       0,
       priceChanges: 0,
-      alertsSent: 0,
+      alertsSent:   0,
     };
 
     for (const product of products || []) {
       try {
-        const productData = await scrapeProduct(product.url);
+        // ── Scrape latest price ─────────────────────────────────────────
+        const scraped = await scrapeProduct(product.url);
 
-        if (!productData?.current_price) {
+        // scrapeProduct returns: { name, current_price, currency, image_url }
+        if (!scraped.current_price) {
+          console.warn(`⚠️  No price found for ${product.url}`);
           results.failed++;
           continue;
         }
 
-        const newPrice = parseFloat(productData.current_price);
+        const newPrice = parseFloat(scraped.current_price);
         const oldPrice = parseFloat(product.current_price);
+        const currency = scraped.currency || product.currency;
 
+        // ── Update product row ──────────────────────────────────────────
         await supabase
           .from("products")
           .update({
             current_price: newPrice,
-            currency: productData.currency || product.currency,
-            name: productData.name || product.name,
-            image_url: productData.image_url || product.image_url,
-            updated_at: new Date().toISOString(),
+            currency,
+            name:          scraped.name      || product.name,
+            image_url:     scraped.image_url || product.image_url,
+            updated_at:    new Date().toISOString(),
           })
           .eq("id", product.id);
 
+        // ── Always record price history ─────────────────────────────────
         await supabase.from("price_history").insert({
           product_id: product.id,
-          price: newPrice,
-          currency: productData.currency || product.currency,
+          price:      newPrice,
+          currency,
           checked_at: new Date().toISOString(),
         });
 
         if (newPrice !== oldPrice) {
           results.priceChanges++;
-          console.log(
-            `💱 Price changed for "${product.name}": ${oldPrice} → ${newPrice}`
-          );
+          console.log(`💱 Price changed for "${product.name}": ${oldPrice} → ${newPrice}`);
         } else {
           results.skipped++;
         }
 
+        // ── Get user email ──────────────────────────────────────────────
+        // We store user_email on the product row to avoid auth.admin calls
         const userEmail = product.user_email;
 
         if (!userEmail) {
-          console.warn(
-            `⚠️ No user_email on product ${product.id} — skipping alerts`
-          );
+          console.warn(`⚠️  No user_email on product ${product.id} — skipping alerts`);
           results.updated++;
           continue;
         }
@@ -93,18 +97,15 @@ export async function POST(request) {
         if (newPrice < oldPrice) {
           try {
             await sendPriceDropAlert({
-              to: userEmail,
-              product: { ...product, url: product.url },
+              to:       userEmail,
+              product:  { ...product, url: product.url },
               oldPrice,
               newPrice,
             });
             results.alertsSent++;
             console.log(`📧 Price drop alert sent to ${userEmail}`);
           } catch (e) {
-            console.error(
-              `❌ Price drop email failed for ${product.id}:`,
-              e.message
-            );
+            console.error(`❌ Price drop email failed for ${product.id}:`, e.message);
           }
         }
 
@@ -116,26 +117,20 @@ export async function POST(request) {
         ) {
           try {
             await sendTargetPriceAlert({
-              to: userEmail,
-              product: { ...product, current_price: newPrice },
+              to:          userEmail,
+              product:     { ...product, current_price: newPrice },
               targetPrice: product.target_price,
             });
             results.alertsSent++;
             console.log(`🎯 Target price alert sent to ${userEmail}`);
           } catch (e) {
-            console.error(
-              `❌ Target price email failed for ${product.id}:`,
-              e.message
-            );
+            console.error(`❌ Target price email failed for ${product.id}:`, e.message);
           }
         }
 
         results.updated++;
       } catch (error) {
-        console.error(
-          `❌ Error processing product ${product.id}:`,
-          error.message
-        );
+        console.error(`❌ Error processing product ${product.id}:`, error.message);
         results.failed++;
       }
     }
@@ -157,8 +152,7 @@ export async function POST(request) {
 export async function GET() {
   return NextResponse.json({
     status: "ok",
-    message:
-      "Price check endpoint is live. Use POST with Authorization header to trigger.",
+    message: "Price check endpoint is live. Use POST with Authorization header to trigger.",
     usage: "POST /api/cron/check-prices with Authorization: Bearer <CRON_SECRET>",
   });
 }

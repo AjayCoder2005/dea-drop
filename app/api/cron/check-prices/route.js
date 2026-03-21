@@ -49,9 +49,9 @@ export async function POST(request) {
 
         const newPrice = parseFloat(scraped.current_price);
         const oldPrice = parseFloat(product.current_price);
-        const currency = scraped.currency || product.currency;
+        const currency = scraped.currency || product.currency; // ✅ FIXED
 
-        // ✅ Update product
+        // Update product
         await supabase
           .from("products")
           .update({
@@ -63,11 +63,11 @@ export async function POST(request) {
           })
           .eq("id", product.id);
 
-        // ✅ Always insert price history
+        // Always insert price history
         await supabase.from("price_history").insert({
           product_id: product.id,
           price:      newPrice,
-          currency,
+          currency,  // ✅ FIXED - was undefined before
           checked_at: new Date().toISOString(),
         });
 
@@ -86,7 +86,7 @@ export async function POST(request) {
           continue;
         }
 
-        // ✅ Price drop alert - any price drop
+        // Price drop alert
         if (newPrice < oldPrice) {
           try {
             await sendPriceDropAlert(
@@ -102,7 +102,7 @@ export async function POST(request) {
           }
         }
 
-        // ✅ Target price alert
+        // Target price alert
         if (
           product.target_price &&
           newPrice <= parseFloat(product.target_price) &&

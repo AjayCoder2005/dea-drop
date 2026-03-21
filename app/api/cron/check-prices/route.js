@@ -49,7 +49,7 @@ export async function POST(request) {
 
         const newPrice = parseFloat(scraped.current_price);
         const oldPrice = parseFloat(product.current_price);
-        const currency = scraped.currency || product.currency; // ✅ FIXED
+        const currency = scraped.currency || product.currency; // ✅ FIXED variable
 
         // Update product
         await supabase
@@ -67,7 +67,7 @@ export async function POST(request) {
         await supabase.from("price_history").insert({
           product_id: product.id,
           price:      newPrice,
-          currency,  // ✅ FIXED - was undefined before
+          currency,   // ✅ FIXED - was undefined before
           checked_at: new Date().toISOString(),
         });
 

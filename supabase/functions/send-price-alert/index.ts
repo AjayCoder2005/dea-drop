@@ -2,12 +2,16 @@
 // Path: supabase/functions/send-price-alert/index.ts
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+// ✅ Remove this line entirely:
+import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
+
 
 // ✅ Deno.env.get() takes the KEY NAME as string, not the actual value
 const RESEND_KEY   = Deno.env.get("RESEND_API_KEY")!;
 const RESEND_FROM  = Deno.env.get("RESEND_FROM_EMAIL") ?? "onboarding@resend.dev";
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
-const SERVICE_KEY = Deno.env.get("SERVICE_ROLE_KEY")!;
+const SERVICE_KEY  = Deno.env.get("SERVICE_ROLE_KEY")!;
+
 
 
 const sym = (c: string) =>

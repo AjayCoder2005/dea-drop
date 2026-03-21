@@ -7,15 +7,14 @@ import Image from "next/image";
 import {
   Trash2, BarChart2, Bell, BellOff, Check,
   TrendingDown, TrendingUp, Eye,
-  CircleDot,   // Tracking status pill
-  Crosshair,   // Target Reached badge
-  BellRing,    // Alert price badge
+  CircleDot,
+  Crosshair,
+  BellRing,
 } from "lucide-react";
 import { deleteProduct, setTargetPrice } from "@/app/actions";
 import PriceChart from "./PriceChart";
 import { toast } from "sonner";
 
-// ── inject keyframes once ─────────────────────────────────────────────────────
 const STYLES = `
   @keyframes priceDrop {
     0%   { transform: scale(1);    background: transparent; }
@@ -64,7 +63,6 @@ const STYLES = `
     background-size: 800px 100%;
     animation: imgShimmer 1.4s ease-in-out infinite;
   }
-
   @keyframes imgFadeIn {
     from { opacity: 0; transform: scale(1.05); }
     to   { opacity: 1; transform: scale(1); }
@@ -75,23 +73,15 @@ const STYLES = `
     92%  { opacity: 0.5; }
     100% { transform: translateY(800%); opacity: 0; }
   }
-  @keyframes cornerGlow {
-    0%,100% { opacity: 0.25; }
-    50%     { opacity: 1; }
-  }
   @keyframes borderShimmer {
     0%,100% { opacity: 0.3; }
     50%     { opacity: 0.8; }
   }
-
   .pc-img-loaded   { animation: imgFadeIn 0.55s cubic-bezier(0.25,0.46,0.45,0.94) forwards; }
   .pc-img-inner    { transition: transform 0.55s cubic-bezier(0.25,0.46,0.45,0.94); }
   .pc-img-wrap:hover .pc-img-inner { transform: scale(1.045); }
   .pc-scan-line    { animation: scanLine 4s ease-in-out infinite 2s; pointer-events: none; }
-  .pc-corner       { animation: cornerGlow 2.8s ease-in-out infinite; }
   .pc-border-pulse { animation: borderShimmer 3s ease-in-out infinite; }
-
-  /* ── Badge & button hovers ── */
   .pc-live-badge {
     cursor: default;
     transition: background .2s, border-color .2s, transform .2s, box-shadow .2s;
@@ -122,18 +112,12 @@ const STYLES = `
     transform: scale(1.12);
     box-shadow: 0 0 12px rgba(244,63,94,0.4);
   }
-  .pc-delete-btn:active {
-    transform: scale(0.96);
-  }
-
-  /* ── Card entrance ── */
+  .pc-delete-btn:active { transform: scale(0.96); }
   @keyframes cardEnter {
     from { opacity: 0; transform: translateY(18px) scale(0.97); }
     to   { opacity: 1; transform: translateY(0)    scale(1);    }
   }
   .pc-card-enter { animation: cardEnter 0.45s cubic-bezier(0.34,1.2,0.64,1) both; }
-
-  /* ── Card hover lift ── */
   .pc-card {
     transition: transform 0.25s cubic-bezier(0.25,0.46,0.45,0.94),
                 box-shadow 0.25s cubic-bezier(0.25,0.46,0.45,0.94),
@@ -143,26 +127,40 @@ const STYLES = `
     transform: translateY(-4px);
     box-shadow: 0 16px 40px rgba(0,0,0,0.45), 0 0 0 1px rgba(108,99,255,0.15);
   }
-
-  /* ── Action button press ── */
   .pc-action-btn {
     transition: all 0.2s cubic-bezier(0.25,0.46,0.45,0.94) !important;
   }
   .pc-action-btn:hover  { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(108,99,255,0.2); }
   .pc-action-btn:active { transform: scale(0.97); }
-
-  /* ── Alert badge ── */
   .pc-alert-badge { transition: transform 0.2s, box-shadow 0.2s; }
   .pc-alert-badge:hover { transform: scale(1.02); box-shadow: 0 0 12px rgba(167,139,250,0.2); }
-
-  /* ── Chart toggle ── */
   .pc-chart-toggle { transition: color 0.2s, transform 0.15s !important; }
   .pc-chart-toggle:hover  { transform: scale(1.03); }
   .pc-chart-toggle:active { transform: scale(0.97); }
-
-  /* ── Price number ── */
   .pc-price-num { transition: color 0.3s, transform 0.2s; display: inline-block; }
   .pc-price-num:hover { transform: scale(1.06); }
+
+  /* ✅ Fixed: X remove button on alert badge */
+  .pc-remove-alert {
+    width: 24px; height: 24px;
+    display: flex; align-items: center; justify-content: center;
+    border-radius: 6px;
+    background: transparent;
+    border: 1px solid transparent;
+    color: #555566;
+    cursor: pointer;
+    font-size: 13px;
+    line-height: 1;
+    transition: background .18s, color .18s, border-color .18s, transform .18s;
+    flex-shrink: 0;
+  }
+  .pc-remove-alert:hover {
+    background: rgba(244,63,94,0.12);
+    border-color: rgba(244,63,94,0.3);
+    color: #f43f5e;
+    transform: scale(1.1);
+  }
+  .pc-remove-alert:active { transform: scale(0.95); }
 `;
 
 function injectStyles() {
@@ -174,7 +172,6 @@ function injectStyles() {
   document.head.appendChild(tag);
 }
 
-// ── animated price counter ────────────────────────────────────────────────────
 function useCountUp(value, duration = 700) {
   const [display, setDisplay] = useState(value);
   const prev = useRef(value);
@@ -194,7 +191,6 @@ function useCountUp(value, duration = 700) {
   return display;
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
 const ProductCard = ({ product: initialProduct }) => {
   const router   = useRouter();
   const supabase = createClient();
@@ -228,7 +224,6 @@ const ProductCard = ({ product: initialProduct }) => {
     else setShowChart(false);
   };
 
-  // ── Supabase Realtime ─────────────────────────────────────────────────────
   useEffect(() => {
     const channel = supabase
       .channel(`product-${product.id}`)
@@ -275,6 +270,7 @@ const ProductCard = ({ product: initialProduct }) => {
       setSaving(true);
       await setTargetPrice(product.id, parseFloat(targetInput));
       setSaved(true);
+      setProduct(p => ({ ...p, target_price: parseFloat(targetInput) }));
       toast.success("Alert set 🔔");
       setTimeout(() => { setSaved(false); setShowTargetInput(false); router.refresh(); }, 600);
     } catch {
@@ -285,6 +281,7 @@ const ProductCard = ({ product: initialProduct }) => {
   const handleRemoveTarget = async (e) => {
     e.stopPropagation();
     await setTargetPrice(product.id, null);
+    setProduct(p => ({ ...p, target_price: null }));
     setTargetInput("");
     toast.success("Alert removed");
     router.refresh();
@@ -293,6 +290,11 @@ const ProductCard = ({ product: initialProduct }) => {
   const priceColor =
     priceFlash === "drop" ? "#22c55e" :
     priceFlash === "rise" ? "#f43f5e" : "#a78bfa";
+
+  const hostname = (() => {
+    try { return new URL(product.url).hostname.replace("www.", ""); }
+    catch { return ""; }
+  })();
 
   return (
     <div
@@ -306,7 +308,7 @@ const ProductCard = ({ product: initialProduct }) => {
         opacity: deleting ? 0.4 : 1,
       }}
     >
-      {/* ── IMAGE ──────────────────────────────────────────────────────────── */}
+      {/* IMAGE */}
       <div
         className="pc-img-wrap"
         style={{
@@ -322,30 +324,19 @@ const ProductCard = ({ product: initialProduct }) => {
           boxShadow: "0 0 0 1px rgba(108,99,255,0.08), inset 0 1px 0 rgba(255,255,255,0.05)",
         }}
       >
-        {/* Animated glowing border ring */}
         <div className="pc-border-pulse" style={{
-          position: "absolute", inset: 0, zIndex: 6,
-          borderRadius: 14,
-          border: "1px solid rgba(108,99,255,0.3)",
-          pointerEvents: "none",
+          position: "absolute", inset: 0, zIndex: 6, borderRadius: 14,
+          border: "1px solid rgba(108,99,255,0.3)", pointerEvents: "none",
         }} />
-
-        {/* 4 corner accent dots — REMOVED */}
-
-        {/* Slow scan-line sweep */}
         <div className="pc-scan-line" style={{
           position: "absolute", left: 0, right: 0, top: 0,
           height: "20%", zIndex: 5,
           background: "linear-gradient(to bottom, transparent, rgba(108,99,255,0.055), transparent)",
           pointerEvents: "none",
         }} />
-
-        {/* Shimmer while loading */}
         {!imgLoaded && !imgError && (
           <div className="pc-img-shimmer" style={{ position: "absolute", inset: 0, zIndex: 1 }} />
         )}
-
-        {/* Emoji fallback */}
         {(!product.image_url || imgError) && (
           <div style={{
             position: "absolute", inset: 0,
@@ -353,13 +344,9 @@ const ProductCard = ({ product: initialProduct }) => {
             alignItems: "center", justifyContent: "center", gap: 8,
           }}>
             <span style={{ fontSize: 44, filter: "grayscale(0.2)" }}>🛍️</span>
-            <span style={{ fontSize: 10, color: "#333340", letterSpacing: 1 }}>
-              {(() => { try { return new URL(product.url).hostname.replace("www.", ""); } catch { return ""; } })()}
-            </span>
+            <span style={{ fontSize: 10, color: "#333340", letterSpacing: 1 }}>{hostname}</span>
           </div>
         )}
-
-        {/* Actual image with zoom-in wrapper */}
         {product.image_url && !imgError && (
           <div className="pc-img-inner" style={{ position: "absolute", inset: 0 }}>
             <Image
@@ -368,27 +355,20 @@ const ProductCard = ({ product: initialProduct }) => {
               fill
               sizes="(max-width: 768px) 100vw, 400px"
               className={imgLoaded ? "pc-img-loaded" : ""}
-              style={{
-                objectFit: "contain",
-                padding: "10px",
-                opacity: imgLoaded ? 1 : 0,
-                mixBlendMode: "multiply",
-              }}
+              style={{ objectFit: "contain", padding: "10px", opacity: imgLoaded ? 1 : 0, mixBlendMode: "multiply" }}
               onLoad={() => setImgLoaded(true)}
               onError={() => setImgError(true)}
               unoptimized
             />
           </div>
         )}
-
-        {/* Bottom gradient */}
         <div style={{
           position: "absolute", bottom: 0, left: 0, right: 0, height: "45%",
           background: "linear-gradient(to bottom, transparent, #0e0e14)",
           zIndex: 2, pointerEvents: "none",
         }} />
 
-        {/* LIVE badge */}
+        {/* ✅ FIXED: LIVE badge — always top-right */}
         <div className="pc-live-badge" style={{
           position: "absolute", top: 10, right: 10, zIndex: 8,
           display: "flex", alignItems: "center", gap: 5,
@@ -401,7 +381,7 @@ const ProductCard = ({ product: initialProduct }) => {
           LIVE
         </div>
 
-        {/* Target reached badge */}
+        {/* ✅ FIXED: Target reached badge — top-left, always */}
         {isTargetMet && (
           <div className="pc-badge-in pc-target-badge" style={{
             position: "absolute", top: 10, left: 10, zIndex: 8,
@@ -445,16 +425,16 @@ const ProductCard = ({ product: initialProduct }) => {
           </div>
         )}
 
-        {/* Delete button */}
+        {/* ✅ FIXED: Delete button — always bottom-right, never conflicts */}
         <button
           type="button"
           className="pc-delete-btn"
           onClick={(e) => { e.stopPropagation(); setShowConfirm(true); }}
           disabled={deleting}
           style={{
-            position: "absolute", top: 10,
-            left: isTargetMet ? "auto" : 10,
-            right: isTargetMet ? 10 : "auto",
+            position: "absolute",
+            bottom: 10,   /* ✅ moved to bottom so it never overlaps top badges */
+            right: 10,
             zIndex: 9,
             background: "rgba(0,0,0,0.55)", backdropFilter: "blur(10px)",
             color: "#555566", border: "1px solid rgba(255,255,255,0.1)",
@@ -467,15 +447,13 @@ const ProductCard = ({ product: initialProduct }) => {
         </button>
       </div>
 
-      {/* ── BODY ───────────────────────────────────────────────────────────── */}
+      {/* BODY */}
       <div style={{ padding: "14px 16px", display: "flex", flexDirection: "column", gap: 10, flex: 1 }}>
 
-        {/* Source */}
         <div style={{ fontSize: 11, color: "#333340", textTransform: "uppercase", letterSpacing: "0.8px" }}>
-          {(() => { try { return new URL(product.url).hostname.replace("www.", ""); } catch { return ""; } })()}
+          {hostname}
         </div>
 
-        {/* Name */}
         <a href={product.url} target="_blank" rel="noreferrer" style={{ color: "#d0d0e0", textDecoration: "none" }}>
           <p style={{
             fontSize: 14, fontWeight: 500, lineHeight: 1.45, margin: 0,
@@ -490,11 +468,10 @@ const ProductCard = ({ product: initialProduct }) => {
         <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
           <span
             className={`pc-price-num${priceFlash === "drop" ? " pc-price-drop" : priceFlash === "rise" ? " pc-price-rise" : ""}`}
-            style={{ fontSize: 24, fontWeight: 700, fontFamily: "'DM Mono', monospace", letterSpacing: -1, display: "inline-block", color: priceColor, transition: "color .3s" }}
+            style={{ fontSize: 24, fontWeight: 700, fontFamily: "'DM Mono', monospace", letterSpacing: -1, color: priceColor, transition: "color .3s" }}
           >
             {currency}{animatedPrice.toLocaleString("en-IN")}
           </span>
-
           {priceFlash === "drop" ? (
             <span className="pc-slide-up" style={{ display: "flex", alignItems: "center", gap: 3, fontSize: 12, fontWeight: 600, color: "#22c55e", background: "rgba(34,197,94,0.1)", border: "1px solid rgba(34,197,94,0.2)", padding: "3px 9px", borderRadius: 20 }}>
               <TrendingDown style={{ width: 11, height: 11 }} /> Dropped!
@@ -505,36 +482,65 @@ const ProductCard = ({ product: initialProduct }) => {
             </span>
           ) : (
             <span style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 13, color: "#444455", letterSpacing: "0.3px" }}>
-              <CircleDot style={{ width: 13, height: 13 }} />
-              Tracking
+              <CircleDot style={{ width: 13, height: 13 }} /> Tracking
             </span>
           )}
         </div>
 
-        {/* Alert badge — BellRing icon */}
+        {/* ✅ FIXED: Alert badge with proper X button */}
         {product.target_price && (
           <div className="pc-alert-badge" style={{
             display: "flex", justifyContent: "space-between", alignItems: "center",
             fontSize: 14, padding: "9px 12px", borderRadius: 10,
             border: `1px solid ${isTargetMet ? "rgba(34,197,94,0.25)" : "rgba(167,139,250,0.2)"}`,
             background: isTargetMet ? "rgba(34,197,94,0.06)" : "rgba(167,139,250,0.06)",
+            gap: 8,
           }}>
-            <span style={{ display: "flex", alignItems: "center", gap: 7, color: isTargetMet ? "#22c55e" : "#a78bfa" }}>
-              <BellRing style={{ width: 14, height: 14 }} />
-              Alert: {currency}{parseFloat(product.target_price).toLocaleString("en-IN")}
+            {/* Left: icon + price + met badge */}
+            <span style={{ display: "flex", alignItems: "center", gap: 7, color: isTargetMet ? "#22c55e" : "#a78bfa", flex: 1, minWidth: 0 }}>
+              <BellRing style={{ width: 14, height: 14, flexShrink: 0 }} />
+              <span style={{ fontFamily: "'DM Mono', monospace", fontSize: 13 }}>
+                Alert: {currency}{parseFloat(product.target_price).toLocaleString("en-IN")}
+              </span>
               {isTargetMet && (
-                <span style={{ fontSize: 11, background: "rgba(34,197,94,0.15)", padding: "2px 7px", borderRadius: 10, color: "#22c55e", fontWeight: 600 }}>
+                <span style={{
+                  fontSize: 10, background: "rgba(34,197,94,0.15)",
+                  padding: "2px 7px", borderRadius: 10,
+                  color: "#22c55e", fontWeight: 700,
+                  flexShrink: 0,
+                }}>
                   ✓ Met
                 </span>
               )}
             </span>
-            <button
-              type="button"
-              onClick={handleRemoveTarget}
-              style={{ background: "none", border: "none", color: "#333340", cursor: "pointer", fontSize: 15, lineHeight: 1, padding: "0 2px", transition: "color .2s" }}
-              onMouseEnter={e => e.currentTarget.style.color = "#f43f5e"}
-              onMouseLeave={e => e.currentTarget.style.color = "#333340"}
-            >✕</button>
+
+            {/* ✅ Right: Edit + Remove buttons — clearly visible */}
+            <div style={{ display: "flex", gap: 4, flexShrink: 0 }}>
+              {/* Edit */}
+              <button
+                type="button"
+                onClick={(e) => { e.stopPropagation(); setShowTargetInput(!showTargetInput); }}
+                title="Edit alert price"
+                style={{
+                  width: 26, height: 26, borderRadius: 7,
+                  background: "rgba(167,139,250,0.08)",
+                  border: "1px solid rgba(167,139,250,0.2)",
+                  color: "#a78bfa", cursor: "pointer",
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                  fontSize: 12, transition: "all .18s",
+                }}
+                onMouseEnter={e => { e.currentTarget.style.background = "rgba(167,139,250,0.18)"; e.currentTarget.style.transform = "scale(1.1)"; }}
+                onMouseLeave={e => { e.currentTarget.style.background = "rgba(167,139,250,0.08)"; e.currentTarget.style.transform = "scale(1)"; }}
+              >✏️</button>
+
+              {/* Remove */}
+              <button
+                type="button"
+                className="pc-remove-alert"
+                onClick={handleRemoveTarget}
+                title="Remove alert"
+              >✕</button>
+            </div>
           </div>
         )}
 
@@ -550,6 +556,7 @@ const ProductCard = ({ product: initialProduct }) => {
               style={{ flex: 1, background: "#13131a", border: "1px solid #1e1e2a", borderRadius: 8, padding: "7px 12px", color: "#f0f0f5", fontSize: 13, outline: "none", fontFamily: "'DM Mono', monospace", transition: "border-color .2s" }}
               onFocus={e => e.target.style.borderColor = "#6c63ff"}
               onBlur={e => e.target.style.borderColor = "#1e1e2a"}
+              onKeyDown={e => e.key === "Enter" && handleSetTarget(e)}
             />
             <button
               type="button"
@@ -559,6 +566,11 @@ const ProductCard = ({ product: initialProduct }) => {
             >
               {saved ? <Check style={{ width: 14, height: 14 }} /> : saving ? "…" : "Set"}
             </button>
+            <button
+              type="button"
+              onClick={(e) => { e.stopPropagation(); setShowTargetInput(false); }}
+              style={{ background: "#18181f", color: "#888899", border: "1px solid #222230", borderRadius: 8, padding: "7px 10px", fontSize: 12, cursor: "pointer", flexShrink: 0 }}
+            >✕</button>
           </div>
         )}
 

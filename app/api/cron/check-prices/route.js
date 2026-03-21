@@ -15,6 +15,7 @@ export async function POST(request) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    // ✅ Service role key required to query auth.users
     const supabase = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL,
       process.env.SUPABASE_SERVICE_ROLE_KEY
@@ -25,6 +26,15 @@ export async function POST(request) {
       .select("*");
 
     if (productsError) throw productsError;
+
+    // ✅ Fixed: batch-fetch all user emails from auth.users in one call
+    const emailMap = {};
+    const { data: users, error: usersError } = await supabase.auth.admin.listUsers();
+    if (!usersError && users?.users) {
+      for (const u of users.users) {
+        emailMap[u.id] = u.email;
+      }
+    }
 
     const results = {
       total:        products?.length || 0,
@@ -53,8 +63,8 @@ export async function POST(request) {
           .update({
             current_price: newPrice,
             currency,
-            name:      scraped.name      || product.name,
-            image_url: scraped.image_url || product.image_url,
+            name:       scraped.name      || product.name,
+            image_url:  scraped.image_url || product.image_url,
             updated_at: new Date().toISOString(),
           })
           .eq("id", product.id);
@@ -72,17 +82,20 @@ export async function POST(request) {
           results.skipped++;
         }
 
-        const userEmail = product.user_email;
+        // ✅ Fixed: look up email from the map (products table has user_id, not user_email)
+        const userEmail = emailMap[product.user_id];
         if (!userEmail) {
           results.updated++;
           continue;
         }
 
+        // Price drop alert
         if (newPrice < oldPrice) {
           await sendPriceDropAlert(userEmail, product, oldPrice, newPrice);
           results.alertsSent++;
         }
 
+        // Target price alert — only fires when price first crosses the threshold
         if (
           product.target_price &&
           newPrice <= parseFloat(product.target_price) &&
@@ -94,25 +107,26 @@ export async function POST(request) {
 
         results.updated++;
       } catch (error) {
-        console.error(`❌ Error:`, error.message);
+        console.error(`❌ Failed for product ${product.id}:`, error.message);
         results.failed++;
       }
     }
 
     return NextResponse.json({
-      success: true,
-      message: "Price check completed",
+      success:   true,
+      message:   "Price check completed",
       timestamp: new Date().toISOString(),
       results,
     });
   } catch (error) {
+    console.error("Cron job error:", error);
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }
 
 export async function GET() {
   return NextResponse.json({
-    status: "ok",
+    status:  "ok",
     message: "Price check endpoint is live. Use POST to trigger.",
   });
 }

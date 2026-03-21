@@ -1,11 +1,13 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { scrapeProduct } from "@/lib/firecrawl";
-import { sendPriceDropAlert } from "@/lib/resend"; // single import — covers both drop + target
+import { sendPriceDropAlert } from "@/lib/resend";
+
+export const maxDuration = 60;
+export const dynamic = "force-dynamic";
 
 export async function POST(request) {
   try {
-    // ── Auth check ────────────────────────────────────────────────────────
     const authHeader = request.headers.get("authorization");
     const cronSecret = process.env.CRON_SECRET;
 
@@ -13,23 +15,33 @@ export async function POST(request) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // ── Service role client (bypasses RLS) ────────────────────────────────
     const supabase = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL,
       process.env.SUPABASE_SERVICE_ROLE_KEY
     );
 
-    // ── Fetch all tracked products ────────────────────────────────────────
+    // ✅ Env var diagnostic — shows in response so you can see what's missing
+    const envCheck = {
+      FIRECRAWL_API_KEY:        !!process.env.FIRECRAWL_API_KEY,
+      SUPABASE_SERVICE_ROLE_KEY: !!process.env.SUPABASE_SERVICE_ROLE_KEY,
+      NEXT_PUBLIC_SUPABASE_URL:  !!process.env.NEXT_PUBLIC_SUPABASE_URL,
+      RESEND_API_KEY:            !!process.env.RESEND_API_KEY,
+    };
+
     const { data: products, error: productsError } = await supabase
       .from("products")
       .select("*");
 
-    if (productsError) {
-      console.error("Products fetch error:", productsError);
-      throw productsError;
-    }
+    if (productsError) throw productsError;
 
-    console.log(`🔍 Checking prices for ${products?.length || 0} products`);
+    // Batch-fetch all user emails
+    const emailMap = {};
+    const { data: users, error: usersError } = await supabase.auth.admin.listUsers();
+    if (!usersError && users?.users) {
+      for (const u of users.users) {
+        emailMap[u.id] = u.email;
+      }
+    }
 
     const results = {
       total:        products?.length || 0,
@@ -38,16 +50,16 @@ export async function POST(request) {
       failed:       0,
       priceChanges: 0,
       alertsSent:   0,
+      errors:       [], // ✅ Now captures actual error messages per product
     };
 
     for (const product of products || []) {
       try {
-        // ── Scrape latest price ─────────────────────────────────────────
         const scraped = await scrapeProduct(product.url);
 
         if (!scraped.current_price) {
-          console.warn(`⚠️  No price found for ${product.url}`);
           results.failed++;
+          results.errors.push({ productId: product.id, url: product.url, error: "No price extracted" });
           continue;
         }
 
@@ -55,19 +67,17 @@ export async function POST(request) {
         const oldPrice = parseFloat(product.current_price);
         const currency = scraped.currency || product.currency;
 
-        // ── Update product row ──────────────────────────────────────────
         await supabase
           .from("products")
           .update({
             current_price: newPrice,
             currency,
-            name:          scraped.name      || product.name,
-            image_url:     scraped.image_url || product.image_url,
-            updated_at:    new Date().toISOString(),
+            name:       scraped.name      || product.name,
+            image_url:  scraped.image_url || product.image_url,
+            updated_at: new Date().toISOString(),
           })
           .eq("id", product.id);
 
-        // ── Always record price history ─────────────────────────────────
         await supabase.from("price_history").insert({
           product_id: product.id,
           price:      newPrice,
@@ -77,78 +87,52 @@ export async function POST(request) {
 
         if (newPrice !== oldPrice) {
           results.priceChanges++;
-          console.log(`💱 Price changed for "${product.name}": ${oldPrice} → ${newPrice}`);
         } else {
           results.skipped++;
         }
 
-        // ── Get user email ──────────────────────────────────────────────
-        const userEmail = product.user_email;
-
+        const userEmail = emailMap[product.user_id];
         if (!userEmail) {
-          console.warn(`⚠️  No user_email on product ${product.id} — skipping alerts`);
           results.updated++;
           continue;
         }
 
-        // ── Price drop alert ────────────────────────────────────────────
         if (newPrice < oldPrice) {
-          try {
-            await sendPriceDropAlert({
-              to:          userEmail,
-              productName: product.name,
-              productUrl:  product.url,
-              oldPrice,
-              newPrice,
-              currency,
-            });
-            results.alertsSent++;
-            console.log(`📧 Price drop alert sent to ${userEmail}`);
-          } catch (e) {
-            console.error(`❌ Price drop email failed for ${product.id}:`, e.message);
-          }
+          await sendPriceDropAlert(userEmail, product, oldPrice, newPrice);
+          results.alertsSent++;
         }
 
-        // ── Target price alert ──────────────────────────────────────────
         if (
           product.target_price &&
           newPrice <= parseFloat(product.target_price) &&
           oldPrice > parseFloat(product.target_price)
         ) {
-          try {
-            await sendPriceDropAlert({
-              to:          userEmail,
-              productName: product.name,
-              productUrl:  product.url,
-              oldPrice,
-              newPrice,
-              currency,
-              targetPrice: product.target_price,
-            });
-            results.alertsSent++;
-            console.log(`🎯 Target price alert sent to ${userEmail}`);
-          } catch (e) {
-            console.error(`❌ Target price email failed for ${product.id}:`, e.message);
-          }
+          await sendPriceDropAlert(userEmail, product, oldPrice, newPrice);
+          results.alertsSent++;
         }
 
         results.updated++;
       } catch (error) {
-        console.error(`❌ Error processing product ${product.id}:`, error.message);
+        // ✅ Log full error message + product URL so you know exactly what failed
+        console.error(`❌ Failed for ${product.url}:`, error.message);
         results.failed++;
+        results.errors.push({
+          productId: product.id,
+          url:       product.url,
+          error:     error.message,
+        });
       }
     }
-
-    console.log("✅ Cron complete:", results);
 
     return NextResponse.json({
       success:   true,
       message:   "Price check completed",
       timestamp: new Date().toISOString(),
+      envCheck,   // ✅ Shows which env vars are present (true/false, not the actual values)
       results,
     });
   } catch (error) {
-    console.error("❌ Cron job error:", error);
+    console.error("Cron job error:", error);
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }
@@ -156,7 +140,6 @@ export async function POST(request) {
 export async function GET() {
   return NextResponse.json({
     status:  "ok",
-    message: "Price check endpoint is live. Use POST with Authorization header to trigger.",
-    usage:   "POST /api/cron/check-prices with Authorization: Bearer 97d6069d5e8a06fadd5491f82ad7ca9bef8ed248b2082f0a41698aea79863c2a",
+    message: "Price check endpoint is live. Use POST to trigger.",
   });
 }

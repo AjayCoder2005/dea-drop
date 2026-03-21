@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { scrapeProduct } from "@/lib/firecrawl";
-import { sendPriceDropAlert } from "@/lib/resend";
+import { sendPriceDropAlert, sendTargetPriceAlert } from "@/lib/email"; // ✅ updated import path
 
 export const maxDuration = 60;
 export const dynamic = "force-dynamic";
@@ -20,21 +20,13 @@ export async function POST(request) {
       process.env.SUPABASE_SERVICE_ROLE_KEY
     );
 
-    // ✅ Env var diagnostic — shows in response so you can see what's missing
-    const envCheck = {
-      FIRECRAWL_API_KEY:        !!process.env.FIRECRAWL_API_KEY,
-      SUPABASE_SERVICE_ROLE_KEY: !!process.env.SUPABASE_SERVICE_ROLE_KEY,
-      NEXT_PUBLIC_SUPABASE_URL:  !!process.env.NEXT_PUBLIC_SUPABASE_URL,
-      RESEND_API_KEY:            !!process.env.RESEND_API_KEY,
-    };
-
     const { data: products, error: productsError } = await supabase
       .from("products")
       .select("*");
 
     if (productsError) throw productsError;
 
-    // Batch-fetch all user emails
+    // Batch-fetch all user emails from auth.users
     const emailMap = {};
     const { data: users, error: usersError } = await supabase.auth.admin.listUsers();
     if (!usersError && users?.users) {
@@ -50,7 +42,7 @@ export async function POST(request) {
       failed:       0,
       priceChanges: 0,
       alertsSent:   0,
-      errors:       [], // ✅ Now captures actual error messages per product
+      errors:       [],
     };
 
     for (const product of products || []) {
@@ -67,6 +59,7 @@ export async function POST(request) {
         const oldPrice = parseFloat(product.current_price);
         const currency = scraped.currency || product.currency;
 
+        // Update product row
         await supabase
           .from("products")
           .update({
@@ -78,6 +71,7 @@ export async function POST(request) {
           })
           .eq("id", product.id);
 
+        // Always record price history
         await supabase.from("price_history").insert({
           product_id: product.id,
           price:      newPrice,
@@ -97,30 +91,36 @@ export async function POST(request) {
           continue;
         }
 
+        // ✅ Price drop alert — uses new { to, product, oldPrice, newPrice } signature
         if (newPrice < oldPrice) {
-          await sendPriceDropAlert(userEmail, product, oldPrice, newPrice);
+          await sendPriceDropAlert({
+            to:       userEmail,
+            product:  { ...product, current_price: newPrice, currency },
+            oldPrice,
+            newPrice,
+          });
           results.alertsSent++;
         }
 
+        // ✅ Target price alert — uses new { to, product, targetPrice } signature
         if (
           product.target_price &&
           newPrice <= parseFloat(product.target_price) &&
           oldPrice > parseFloat(product.target_price)
         ) {
-          await sendPriceDropAlert(userEmail, product, oldPrice, newPrice);
+          await sendTargetPriceAlert({
+            to:          userEmail,
+            product:     { ...product, current_price: newPrice, currency },
+            targetPrice: product.target_price,
+          });
           results.alertsSent++;
         }
 
         results.updated++;
       } catch (error) {
-        // ✅ Log full error message + product URL so you know exactly what failed
         console.error(`❌ Failed for ${product.url}:`, error.message);
         results.failed++;
-        results.errors.push({
-          productId: product.id,
-          url:       product.url,
-          error:     error.message,
-        });
+        results.errors.push({ productId: product.id, url: product.url, error: error.message });
       }
     }
 
@@ -128,7 +128,6 @@ export async function POST(request) {
       success:   true,
       message:   "Price check completed",
       timestamp: new Date().toISOString(),
-      envCheck,   // ✅ Shows which env vars are present (true/false, not the actual values)
       results,
     });
   } catch (error) {

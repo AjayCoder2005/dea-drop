@@ -1,9 +1,9 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { scrapeProduct } from "@/lib/firecrawl";
-import { sendPriceDropAlert, sendTargetPriceAlert } from "@/lib/email"; // ✅ updated import path
+import { sendPriceDropAlert, sendTargetPriceAlert } from "@/lib/email";
 
-export const maxDuration = 60;
+export const maxDuration = 300;
 export const dynamic = "force-dynamic";
 
 export async function POST(request) {
@@ -26,7 +26,6 @@ export async function POST(request) {
 
     if (productsError) throw productsError;
 
-    // Batch-fetch all user emails from auth.users
     const emailMap = {};
     const { data: users, error: usersError } = await supabase.auth.admin.listUsers();
     if (!usersError && users?.users) {
@@ -59,7 +58,6 @@ export async function POST(request) {
         const oldPrice = parseFloat(product.current_price);
         const currency = scraped.currency || product.currency;
 
-        // Update product row
         await supabase
           .from("products")
           .update({
@@ -71,7 +69,7 @@ export async function POST(request) {
           })
           .eq("id", product.id);
 
-        // Always record price history
+        // ✅ This INSERT triggers the SQL trigger → Edge Function → email
         await supabase.from("price_history").insert({
           product_id: product.id,
           price:      newPrice,
@@ -85,38 +83,11 @@ export async function POST(request) {
           results.skipped++;
         }
 
-        const userEmail = emailMap[product.user_id];
-        if (!userEmail) {
-          results.updated++;
-          continue;
-        }
-
-        // ✅ Price drop alert — uses new { to, product, oldPrice, newPrice } signature
-        if (newPrice < oldPrice) {
-          await sendPriceDropAlert({
-            to:       userEmail,
-            product:  { ...product, current_price: newPrice, currency },
-            oldPrice,
-            newPrice,
-          });
-          results.alertsSent++;
-        }
-
-        // ✅ Target price alert — uses new { to, product, targetPrice } signature
-        if (
-          product.target_price &&
-          newPrice <= parseFloat(product.target_price) &&
-          oldPrice > parseFloat(product.target_price)
-        ) {
-          await sendTargetPriceAlert({
-            to:          userEmail,
-            product:     { ...product, current_price: newPrice, currency },
-            targetPrice: product.target_price,
-          });
-          results.alertsSent++;
-        }
-
         results.updated++;
+
+        // ✅ Delay between scrapes to avoid timeout
+        await new Promise(resolve => setTimeout(resolve, 1000));
+
       } catch (error) {
         console.error(`❌ Failed for ${product.url}:`, error.message);
         results.failed++;

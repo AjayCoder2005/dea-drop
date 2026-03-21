@@ -1,10 +1,4 @@
 {
-  "crons": [
-    {
-      "path": "/api/cron/check-prices",
-      "schedule": "0 3 * * *"
-    }
-  ],
   "functions": {
     "app/api/cron/check-prices/route.js": {
       "maxDuration": 300

@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { scrapeProduct } from "@/lib/firecrawl";
-import { sendPriceDropAlert } from "@/lib/resend";
+import { sendPriceDropAlert } from "@/lib/resend"; // ✅ FIXED
 
 export async function POST(request) {
   try {
@@ -41,7 +41,7 @@ export async function POST(request) {
       try {
         const scraped = await scrapeProduct(product.url);
 
-        if (!scraped?.current_price) {
+        if (!scraped.current_price) {
           console.warn(`⚠️ No price found for ${product.url}`);
           results.failed++;
           continue;
@@ -51,6 +51,7 @@ export async function POST(request) {
         const oldPrice = parseFloat(product.current_price);
         const currency = scraped.currency || product.currency;
 
+        // ✅ Update product
         await supabase
           .from("products")
           .update({
@@ -62,6 +63,7 @@ export async function POST(request) {
           })
           .eq("id", product.id);
 
+        // ✅ Always insert price history
         await supabase.from("price_history").insert({
           product_id: product.id,
           price:      newPrice,
@@ -84,7 +86,7 @@ export async function POST(request) {
           continue;
         }
 
-        // Price drop alert
+        // ✅ Price drop alert - any price drop
         if (newPrice < oldPrice) {
           try {
             await sendPriceDropAlert(
@@ -100,7 +102,7 @@ export async function POST(request) {
           }
         }
 
-        // Target price alert
+        // ✅ Target price alert
         if (
           product.target_price &&
           newPrice <= parseFloat(product.target_price) &&

@@ -1,11 +1,10 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { scrapeProduct } from "@/lib/firecrawl";
-import { sendPriceDropAlert, sendTargetPriceAlert } from "@/lib/email";
+import { sendPriceDropAlert } from "@/lib/resend";
 
 export async function POST(request) {
   try {
-    // ── Auth check ────────────────────────────────────────────────────────
     const authHeader = request.headers.get("authorization");
     const cronSecret = process.env.CRON_SECRET;
 
@@ -13,13 +12,11 @@ export async function POST(request) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // ── Service role client (bypasses RLS) ────────────────────────────────
     const supabase = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL,
       process.env.SUPABASE_SERVICE_ROLE_KEY
     );
 
-    // ── Fetch all tracked products ────────────────────────────────────────
     const { data: products, error: productsError } = await supabase
       .from("products")
       .select("*");
@@ -40,31 +37,31 @@ export async function POST(request) {
       alertsSent:   0,
     };
 
-    for (const product of products) {
+    for (const product of products || []) {
       try {
-        const productData = await scrapeProduct(product.url);
-    
-        // ✅ FIXED - use correct field names from firecrawl.js
-        if (!productData.current_price) {
+        const scraped = await scrapeProduct(product.url);
+
+        if (!scraped?.current_price) {
+          console.warn(`⚠️ No price found for ${product.url}`);
           results.failed++;
           continue;
         }
-    
-        const newPrice = parseFloat(productData.current_price);  // ✅ was currentPrice
+
+        const newPrice = parseFloat(scraped.current_price);
         const oldPrice = parseFloat(product.current_price);
-    
+        const currency = scraped.currency || product.currency;
+
         await supabase
           .from("products")
           .update({
             current_price: newPrice,
-            currency: productData.currency || product.currency,        // ✅ was currencyCode
-            name: productData.name || product.name,                    // ✅ was productName
-            image_url: productData.image_url || product.image_url,     // ✅ was productImageUrl
+            currency,
+            name:       scraped.name      || product.name,
+            image_url:  scraped.image_url || product.image_url,
             updated_at: new Date().toISOString(),
           })
           .eq("id", product.id);
 
-        // ── Always record price history ─────────────────────────────────
         await supabase.from("price_history").insert({
           product_id: product.id,
           price:      newPrice,
@@ -74,59 +71,58 @@ export async function POST(request) {
 
         if (newPrice !== oldPrice) {
           results.priceChanges++;
-          console.log(`💱 Price changed for "${product.name}": ${oldPrice} → ${newPrice}`);
+          console.log(`💱 Price changed: ${oldPrice} → ${newPrice}`);
         } else {
           results.skipped++;
         }
 
-        // ── Get user email ──────────────────────────────────────────────
-        // We store user_email on the product row to avoid auth.admin calls
         const userEmail = product.user_email;
 
         if (!userEmail) {
-          console.warn(`⚠️  No user_email on product ${product.id} — skipping alerts`);
+          console.warn(`⚠️ No user_email on product ${product.id}`);
           results.updated++;
           continue;
         }
 
-        // ── Price drop alert ────────────────────────────────────────────
+        // Price drop alert
         if (newPrice < oldPrice) {
           try {
-            await sendPriceDropAlert({
-              to:       userEmail,
-              product:  { ...product, url: product.url },
+            await sendPriceDropAlert(
+              userEmail,
+              product,
               oldPrice,
-              newPrice,
-            });
+              newPrice
+            );
             results.alertsSent++;
             console.log(`📧 Price drop alert sent to ${userEmail}`);
           } catch (e) {
-            console.error(`❌ Price drop email failed for ${product.id}:`, e.message);
+            console.error(`❌ Email failed:`, e.message);
           }
         }
 
-        // ── Target price alert ──────────────────────────────────────────
+        // Target price alert
         if (
           product.target_price &&
           newPrice <= parseFloat(product.target_price) &&
           oldPrice > parseFloat(product.target_price)
         ) {
           try {
-            await sendTargetPriceAlert({
-              to:          userEmail,
-              product:     { ...product, current_price: newPrice },
-              targetPrice: product.target_price,
-            });
+            await sendPriceDropAlert(
+              userEmail,
+              product,
+              oldPrice,
+              newPrice
+            );
             results.alertsSent++;
-            console.log(`🎯 Target price alert sent to ${userEmail}`);
+            console.log(`🎯 Target alert sent to ${userEmail}`);
           } catch (e) {
-            console.error(`❌ Target price email failed for ${product.id}:`, e.message);
+            console.error(`❌ Target email failed:`, e.message);
           }
         }
 
         results.updated++;
       } catch (error) {
-        console.error(`❌ Error processing product ${product.id}:`, error.message);
+        console.error(`❌ Error processing ${product.id}:`, error.message);
         results.failed++;
       }
     }
@@ -148,7 +144,6 @@ export async function POST(request) {
 export async function GET() {
   return NextResponse.json({
     status: "ok",
-    message: "Price check endpoint is live. Use POST with Authorization header to trigger.",
-    usage: "POST /api/cron/check-prices with Authorization: Bearer <CRON_SECRET>",
+    message: "Price check endpoint is live. Use POST to trigger.",
   });
 }

@@ -3,6 +3,9 @@ import { createClient } from "@supabase/supabase-js";
 import { scrapeProduct } from "@/lib/firecrawl";
 import { sendPriceDropAlert } from "@/lib/resend"; // ✅ FIXED
 
+export const maxDuration = 60; // ✅ ADD THIS
+export const dynamic = "force-dynamic"; // ✅ ADD THIS
+
 export async function POST(request) {
   try {
     const authHeader = request.headers.get("authorization");

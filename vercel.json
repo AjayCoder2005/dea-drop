@@ -1,7 +1,11 @@
 {
+  "framework": "nextjs",
   "functions": {
-    "app/api/cron/check-prices/route.js": {
-      "maxDuration": 300
+    "app/api/**": {
+      "maxDuration": 60
+    },
+    "app/actions.js": {
+      "maxDuration": 60
     }
   }
 }

@@ -157,6 +157,6 @@ export async function GET() {
   return NextResponse.json({
     status:  "ok",
     message: "Price check endpoint is live. Use POST with Authorization header to trigger.",
-    usage:   "POST /api/cron/check-prices with Authorization: Bearer <CRON_SECRET>",
+    usage:   "POST /api/cron/check-prices with Authorization: Bearer 97d6069d5e8a06fadd5491f82ad7ca9bef8ed248b2082f0a41698aea79863c2a",
   });
 }

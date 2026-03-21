@@ -1,6 +1,7 @@
 "use client";
 import { useState } from "react";
 import { addProduct } from "@/app/actions";
+import { createClient } from "@/utils/supabase/client";
 import { toast } from "sonner";
 
 const STEPS = [
@@ -9,18 +10,30 @@ const STEPS = [
   "Saving to your tracker...",
 ];
 
-export default function AddProductForm({ user, onAuthRequired }) {
+export default function AddProductForm({ user }) {
   const [url, setUrl]         = useState("");
   const [loading, setLoading] = useState(false);
   const [step, setStep]       = useState(0);
   const [hovered, setHovered] = useState(false);
+  const [showAuthModal, setShowAuthModal] = useState(false);
+
+  const handleGoogleSignIn = async () => {
+    const supabase = createClient();
+    await supabase.auth.signInWithOAuth({
+      provider: "google",
+      options: {
+        redirectTo: `${window.location.origin}/auth/callback`,
+      },
+    });
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!url.trim()) return;
 
+    // ✅ Show auth modal if not signed in
     if (!user) {
-      onAuthRequired?.();
+      setShowAuthModal(true);
       return;
     }
 
@@ -41,7 +54,6 @@ export default function AddProductForm({ user, onAuthRequired }) {
       formData.set("url", url.trim());
       const result = await addProduct(formData);
       clearInterval(stepInterval);
-
       if (result?.error) toast.error(result.error);
       else { toast.success(result.message || "Product added!"); setUrl(""); }
     } catch {
@@ -62,19 +74,21 @@ export default function AddProductForm({ user, onAuthRequired }) {
           from { opacity:0; transform:translateY(-8px); }
           to   { opacity:1; transform:translateY(0); }
         }
+        @keyframes modalIn {
+          from { opacity:0; transform:scale(0.95) translateY(10px); }
+          to   { opacity:1; transform:scale(1) translateY(0); }
+        }
         .track-btn {
           padding: 13px 28px;
           border-radius: 14px;
           border: none;
           background: linear-gradient(135deg, #7c3aed, #6c63ff, #4f46e5);
-          background-size: 200% 200%;
           color: #fff;
           font-size: 15px;
           font-weight: 700;
           cursor: pointer;
           white-space: nowrap;
           transition: all 0.25s cubic-bezier(0.4,0,0.2,1);
-          letter-spacing: 0.2px;
           box-shadow: 0 4px 15px rgba(108,99,255,0.35);
           min-width: 130px;
           display: flex;
@@ -82,17 +96,13 @@ export default function AddProductForm({ user, onAuthRequired }) {
           justify-content: center;
           gap: 8px;
           font-family: var(--font-body);
-          position: relative;
-          overflow: hidden;
         }
         .track-btn:hover:not(:disabled) {
           transform: translateY(-2px);
           box-shadow: 0 8px 25px rgba(108,99,255,0.5);
-          background-position: right center;
         }
         .track-btn:active:not(:disabled) {
           transform: translateY(0px);
-          box-shadow: 0 4px 12px rgba(108,99,255,0.3);
         }
         .track-btn:disabled {
           background: var(--bg-elevated);
@@ -101,26 +111,108 @@ export default function AddProductForm({ user, onAuthRequired }) {
           box-shadow: none;
           transform: none;
         }
-        .track-btn::after {
-          content: '';
-          position: absolute;
-          inset: 0;
-          background: linear-gradient(135deg, rgba(255,255,255,0.1), transparent);
-          opacity: 0;
-          transition: opacity 0.2s;
+        .google-btn {
+          width: 100%;
+          padding: 14px;
+          border-radius: 12px;
+          border: 1px solid var(--bg-border-strong);
+          background: var(--bg-elevated);
+          color: var(--text-primary);
+          font-size: 15px;
+          font-weight: 600;
+          cursor: pointer;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 10px;
+          transition: all 0.2s;
+          font-family: var(--font-body);
         }
-        .track-btn:hover:not(:disabled)::after { opacity: 1; }
-        .spinner {
-          width: 15px; height: 15px;
-          border: 2px solid rgba(255,255,255,0.3);
-          border-top-color: #fff;
-          border-radius: 50%;
-          animation: spin 0.7s linear infinite;
+        .google-btn:hover {
+          background: var(--bg-card);
+          border-color: rgba(108,99,255,0.4);
+          transform: translateY(-1px);
+          box-shadow: 0 4px 12px rgba(0,0,0,0.3);
         }
       `}</style>
 
+      {/* Auth Modal */}
+      {showAuthModal && (
+        <div
+          onClick={(e) => e.target === e.currentTarget && setShowAuthModal(false)}
+          style={{
+            position: "fixed", inset: 0, zIndex: 1000,
+            background: "rgba(0,0,0,0.7)",
+            backdropFilter: "blur(8px)",
+            display: "flex", alignItems: "center", justifyContent: "center",
+            padding: "20px",
+          }}
+        >
+          <div style={{
+            background: "var(--bg-card)",
+            border: "1px solid var(--bg-border-strong)",
+            borderRadius: "20px",
+            padding: "36px 32px",
+            maxWidth: "400px",
+            width: "100%",
+            animation: "modalIn 0.3s cubic-bezier(0.34,1.56,0.64,1)",
+            textAlign: "center",
+          }}>
+            {/* Close button */}
+            <button
+              onClick={() => setShowAuthModal(false)}
+              style={{
+                position: "absolute", top: "16px", right: "16px",
+                background: "none", border: "none", cursor: "pointer",
+                color: "var(--text-muted)", fontSize: "18px",
+              }}
+            >✕</button>
+
+            {/* Icon */}
+            <div style={{
+              width: "56px", height: "56px", borderRadius: "16px",
+              background: "linear-gradient(135deg, #7c3aed, #6c63ff)",
+              display: "flex", alignItems: "center", justifyContent: "center",
+              fontSize: "24px", margin: "0 auto 20px",
+            }}>💰</div>
+
+            <h2 style={{
+              fontFamily: "var(--font-display)", fontSize: "22px",
+              fontWeight: 700, color: "var(--text-primary)",
+              marginBottom: "8px", letterSpacing: "-0.02em",
+            }}>
+              Sign in to track prices
+            </h2>
+            <p style={{
+              fontSize: "14px", color: "var(--text-secondary)",
+              marginBottom: "28px", lineHeight: 1.6,
+            }}>
+              Create a free account to track unlimited products and get instant price drop alerts.
+            </p>
+
+            {/* Google Sign In Button */}
+            <button onClick={handleGoogleSignIn} className="google-btn">
+              <svg width="20" height="20" viewBox="0 0 24 24">
+                <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+                <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+                <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
+                <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+              </svg>
+              Continue with Google
+            </button>
+
+            <p style={{
+              fontSize: "12px", color: "var(--text-muted)",
+              marginTop: "16px",
+            }}>
+              Free forever · No credit card required
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* Form */}
       <form onSubmit={handleSubmit} style={{ width: "100%", maxWidth: "640px", margin: "0 auto" }}>
-        {/* Input row */}
         <div style={{
           display: "flex",
           gap: "8px",
@@ -129,11 +221,7 @@ export default function AddProductForm({ user, onAuthRequired }) {
           borderRadius: "18px",
           padding: "6px 6px 6px 20px",
           transition: "border-color 0.25s, box-shadow 0.25s",
-          boxShadow: loading
-            ? "0 0 0 4px rgba(108,99,255,0.08)"
-            : hovered
-            ? "0 0 0 3px rgba(255,255,255,0.04)"
-            : "none",
+          boxShadow: loading ? "0 0 0 4px rgba(108,99,255,0.08)" : "none",
         }}
           onMouseEnter={() => setHovered(true)}
           onMouseLeave={() => setHovered(false)}
@@ -145,53 +233,38 @@ export default function AddProductForm({ user, onAuthRequired }) {
             placeholder="Paste Amazon, Flipkart or Walmart product URL..."
             disabled={loading}
             style={{
-              flex: 1,
-              background: "transparent",
-              border: "none",
-              outline: "none",
-              color: "var(--text-primary)",
-              fontSize: "14px",
-              fontFamily: "var(--font-body)",
-              padding: "8px 0",
-              minWidth: 0,
+              flex: 1, background: "transparent", border: "none",
+              outline: "none", color: "var(--text-primary)",
+              fontSize: "14px", fontFamily: "var(--font-body)",
+              padding: "8px 0", minWidth: 0,
             }}
           />
-          <button
-            type="submit"
-            disabled={loading || !url.trim()}
-            className="track-btn"
-          >
+          <button type="submit" disabled={loading || !url.trim()} className="track-btn">
             {loading
-              ? <><span className="spinner"/> Tracking...</>
+              ? <><span style={{
+                  width: "15px", height: "15px",
+                  border: "2px solid rgba(255,255,255,0.3)",
+                  borderTopColor: "#fff", borderRadius: "50%",
+                  animation: "spin 0.7s linear infinite",
+                }}/> Tracking...</>
               : <>Track →</>
             }
           </button>
         </div>
 
-        {/* Loading status — only shown while loading */}
+        {/* Loading steps */}
         {loading && (
-          <div style={{
-            marginTop: "14px",
-            textAlign: "center",
-            animation: "slideDown 0.3s ease",
-          }}>
+          <div style={{ marginTop: "14px", textAlign: "center", animation: "slideDown 0.3s ease" }}>
             <div style={{
-              display: "inline-flex",
-              alignItems: "center",
-              gap: "8px",
+              display: "inline-flex", alignItems: "center", gap: "8px",
               padding: "9px 20px",
               background: "rgba(108,99,255,0.08)",
               border: "1px solid rgba(108,99,255,0.2)",
-              borderRadius: "100px",
-              fontSize: "13px",
-              color: "#a78bfa",
+              borderRadius: "100px", fontSize: "13px", color: "#a78bfa",
             }}>
               <span style={{
-                width: "7px", height: "7px",
-                borderRadius: "50%",
-                background: "#6c63ff",
-                animation: "blink 1.2s ease infinite",
-                flexShrink: 0,
+                width: "7px", height: "7px", borderRadius: "50%",
+                background: "#6c63ff", animation: "blink 1.2s ease infinite",
               }}/>
               {STEPS[step]}
             </div>
